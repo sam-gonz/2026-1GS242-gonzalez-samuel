@@ -1,4 +1,4 @@
-# Investigación: Desarrollo Agéntico (Agentic Development) — 2026
+# Investigación: Desarrollo Agéntico
 
 ## Introducción
 Este documento resume qué es el Desarrollo Agéntico en 2026, cómo se practica hoy, y analiza cuatro herramientas relevantes: Copilot CLI, Pi, OpenCode y Claude Code. Incluye ejemplos prácticos, una comparación entre las mejores opciones, y explicaciones de los conceptos de agentes, skills y rules en el contexto de cada herramienta.
@@ -51,7 +51,7 @@ Mejor opción general depende del objetivo:
 - Para mantenimiento y automatización de código masivo: OpenCode.
 - Para control y seguridad: Claude Code.
 
-## Conceptos clave: agentes, skills y rules (comparativa)
+## Conceptos clave: agentes, skills y rules 
 - Agente: Entidad que persigue objetivos (p. ej., "reducir deuda técnica"). En Copilot CLI y OpenCode, suelen ser procesos/flows; en Pi, agentes conversacionales con memoria; en Claude Code, agentes con guardrails.
 - Skill: Componente reutilizable que realiza una acción concreta (ejecutar tests, crear PR, consultar una API). Todas las plataformas usan skills, pero la forma varía (scripts en Copilot CLI, conectores en Pi, transformaciones AST en OpenCode, módulos seguros en Claude Code).
 - Rule: Políticas que limitan o guían comportamiento (aprobaciones, límites de acción, validaciones éticas). Claude Code y las políticas de repositorio de Copilot CLI ofrecen controles más explícitos; Pi y OpenCode permiten reglas adaptadas según contexto operativo.
