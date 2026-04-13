@@ -61,3 +61,8 @@ Mejor opción general depende del objetivo:
 
 ![Copilot CLI](image.png)
 
+<img width="1039" height="210" alt="Captura de pantalla 2026-04-10 222203" src="https://github.com/user-attachments/assets/3e5e7e37-1561-49ef-b7ce-7967b259c1f2" />
+<img width="919" height="36" alt="Captura de pantalla 2026-04-10 221054" src="https://github.com/user-attachments/assets/7fbb23bf-b58e-4e80-b7c0-9aa3fac992d3" />
+<img width="743" height="102" alt="Captura de pantalla 2026-04-10 222520" src="https://github.com/user-attachments/assets/caece024-7b5c-4e46-bdac-1788431e2dd2" />
+
+
