@@ -1,0 +1,13 @@
+{
+  "name": "pollclass",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently \"bun run server\" \"bun run client\"",
+    "server": "cd server && bun run dev",
+    "client": "cd client && bun run dev",
+    "install-all": "bun install && cd server && bun install && cd ../client && bun install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
