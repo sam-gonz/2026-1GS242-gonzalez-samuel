@@ -6,7 +6,7 @@ Suite de pruebas automatizadas para el aplicativo PollClass (Laboratorio 1) util
 ## Estructura de Tests
 
 ```
-2026-1gs242-gonzalez-samuel/lab6/tests/
+2026-1gs242-gonzalez-samuel/Laboratorios/lab6/tests/
 ├── package.json
 ├── playwright.config.ts
 ├── README.md

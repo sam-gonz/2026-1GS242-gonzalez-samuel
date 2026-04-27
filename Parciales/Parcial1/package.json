@@ -1,0 +1,19 @@
+{
+  "name": "tradeup",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/web",
+    "apps/backoffice",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "bun --cwd apps/api dev",
+    "dev:web": "bun --cwd apps/web dev",
+    "dev:backoffice": "bun --cwd apps/backoffice dev",
+    "dev": "bun run dev:api & bun run dev:web & bun run dev:backoffice",
+    "build": "bun run --filter '*' build",
+    "lint": "bun run --filter '*' lint"
+  }
+}
