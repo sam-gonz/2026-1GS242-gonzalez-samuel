@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "composite": true,
+    "moduleResolution": "node",
+    "paths": {
+      "@tradeup/db": ["../../packages/db/src/index.ts"],
+      "@tradeup/db/*": ["../../packages/db/src/*"],
+      "@tradeup/shared": ["../../packages/shared/src/index.ts"],
+      "@tradeup/shared/*": ["../../packages/shared/src/*"],
+      "@tradeup/ui": ["../../packages/ui/src/index.ts"],
+      "@tradeup/ui/*": ["../../packages/ui/src/*"]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "references": [
+    { "path": "../../packages/db" },
+    { "path": "../../packages/shared" }
+  ]
+}
