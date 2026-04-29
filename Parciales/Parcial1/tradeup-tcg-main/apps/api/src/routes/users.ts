@@ -12,6 +12,12 @@ const reviewSchema = z.object({
   comment: z.string().max(500).optional(),
 })
 
+const updateProfileSchema = z.object({
+  username: z.string().min(3).max(30).optional(),
+  bio: z.string().max(300).optional(),
+  avatarUrl: z.string().url().optional(),
+})
+
 // ─── GET /api/users/me/dashboard — auth ──────────────────────────────────────
 // IMPORTANT: static /me routes must be declared BEFORE /:id
 userRoutes.get('/me/dashboard', requireAuth, async (c) => {
@@ -35,11 +41,51 @@ userRoutes.get('/me/dashboard', requireAuth, async (c) => {
       reputation: user.reputation,
       reviewCount: user.reviewCount,
       stripeConnectStatus: user.stripeConnectStatus,
+      bio: (user as any).bio ?? '',
+      avatarUrl: (user as any).avatarUrl ?? '',
     },
     listings,
     offersReceived,
     offersSent,
     transactions,
+  })
+})
+
+// ─── PATCH /api/users/me/profile — auth ──────────────────────────────────────
+userRoutes.patch('/me/profile', requireAuth, async (c) => {
+  const clerkId = c.get('userId')
+  const body = await c.req.json()
+
+  const parsed = updateProfileSchema.safeParse(body)
+  if (!parsed.success) {
+    return c.json({ error: 'Validation failed', details: parsed.error.flatten() }, 400)
+  }
+
+  const user = await User.findOne({ clerkId })
+  if (!user) return c.json({ error: 'User not synced' }, 400)
+
+  // Verificar que el username no esté tomado por otro usuario
+  if (parsed.data.username && parsed.data.username !== user.username) {
+    const existing = await User.findOne({ username: parsed.data.username })
+    if (existing) return c.json({ error: 'Username already taken' }, 409)
+  }
+
+  const updated = await User.findByIdAndUpdate(
+    user._id,
+    { $set: parsed.data },
+    { new: true }
+  )
+
+  return c.json({
+    message: 'Profile updated',
+    user: {
+      id: updated!._id,
+      username: updated!.username,
+      email: updated!.email,
+      reputation: updated!.reputation,
+      bio: (updated as any).bio ?? '',
+      avatarUrl: (updated as any).avatarUrl ?? '',
+    },
   })
 })
 
@@ -80,7 +126,7 @@ userRoutes.post('/me/stripe-onboard', requireAuth, async (c) => {
 userRoutes.get('/:id/profile', async (c) => {
   const { id } = c.req.param()
 
-  const user = await User.findById(id).select('username reputation reviewCount createdAt')
+  const user = await User.findById(id).select('username reputation reviewCount createdAt bio avatarUrl')
   if (!user) return c.json({ error: 'User not found' }, 404)
 
   const [listings, reviews] = await Promise.all([
