@@ -14,7 +14,10 @@ import { transactionRoutes } from './routes/transactions.js'
 import { webhookRoutes } from './routes/webhooks.js'
 import { adminRoutes } from './routes/admin.js'
 import { paymentRoutes } from './routes/payments.js'
+// Agrega el import junto a los demás:
+import { reviewRoutes } from './routes/reviews.js'
 
+// Agrega el mount junto a las demás rutas:
 const app = new Hono()
 
 app.use('*', logger())
@@ -27,6 +30,7 @@ app.use('/uploads/*', serveStatic({ root: './' }))
 
 // Stripe webhook — raw body, before JSON middleware
 app.route('/webhooks', webhookRoutes)
+app.route('/api/reviews', reviewRoutes)
 
 app.route('/api/auth', authRoutes)
 app.route('/api/listings', listingRoutes)
