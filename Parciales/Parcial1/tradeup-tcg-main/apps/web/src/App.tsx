@@ -12,6 +12,7 @@ import { OrdersPage } from './pages/OrdersPage'
 import { OrderDetailPage } from './pages/OrderDetailPage'
 import { AdminPage } from './pages/AdminPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { ProfileSettingsPage } from './pages/ProfileSettingsPage'
 import { useAuthSync } from './hooks/useAuthSync'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -39,6 +40,10 @@ function AppRoutes() {
         <Route
           path="/dashboard"
           element={<ProtectedRoute><DashboardPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/profile/settings"
+          element={<ProtectedRoute><ProfileSettingsPage /></ProtectedRoute>}
         />
         <Route
           path="/orders"
