@@ -11,7 +11,7 @@ function NotifBadge() {
     queryKey: ['notif-summary'],
     queryFn: () => apiFn.notifications.summary(),
     enabled: !!isSignedIn,
-    refetchInterval: 30_000, // poll cada 30s
+    refetchInterval: 30_000,
     staleTime: 20_000,
   })
   const total = data?.total ?? 0
@@ -25,6 +25,7 @@ function NotifBadge() {
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false)
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `hover:text-white transition-colors ${isActive ? 'text-white font-medium' : 'text-[var(--color-muted)]'}`
@@ -70,7 +71,49 @@ export function Navbar() {
             >
               + Publicar carta
             </Link>
-            <UserButton appearance={{ elements: { avatarBox: 'w-8 h-8' } }} />
+
+            {/* Dropdown de perfil */}
+            <div className="relative">
+              <button
+                onClick={() => setProfileMenuOpen(o => !o)}
+                className="flex items-center gap-1.5 focus:outline-none"
+                aria-label="Menu de usuario"
+              >
+                <UserButton appearance={{ elements: { avatarBox: 'w-8 h-8' } }} />
+                <span className="hidden sm:block text-xs text-[var(--color-muted)] hover:text-white transition-colors">
+                  ▾
+                </span>
+              </button>
+
+              {profileMenuOpen && (
+                <div
+                  className="absolute right-0 mt-2 w-48 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg py-1 z-50"
+                  onMouseLeave={() => setProfileMenuOpen(false)}
+                >
+                  <Link
+                    to="/dashboard"
+                    onClick={() => setProfileMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm text-[var(--color-muted)] hover:text-white hover:bg-[var(--color-surface-2)] transition-colors"
+                  >
+                    📊 Dashboard
+                  </Link>
+                  <Link
+                    to="/profile/settings"
+                    onClick={() => setProfileMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm text-[var(--color-muted)] hover:text-white hover:bg-[var(--color-surface-2)] transition-colors"
+                  >
+                    ⚙️ Editar perfil
+                  </Link>
+                  <Link
+                    to="/orders"
+                    onClick={() => setProfileMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm text-[var(--color-muted)] hover:text-white hover:bg-[var(--color-surface-2)] transition-colors"
+                  >
+                    📦 Mis Pedidos
+                  </Link>
+                </div>
+              )}
+            </div>
           </SignedIn>
           <SignedOut>
             <SignInButton mode="modal">
@@ -102,6 +145,7 @@ export function Navbar() {
             <NavLink to="/dashboard" className={mobileLinkClass} onClick={() => setMobileOpen(false)}>Dashboard</NavLink>
             <NavLink to="/orders" className={mobileLinkClass} onClick={() => setMobileOpen(false)}>Mis Pedidos</NavLink>
             <NavLink to="/listings/new" className={mobileLinkClass} onClick={() => setMobileOpen(false)}>+ Publicar carta</NavLink>
+            <NavLink to="/profile/settings" className={mobileLinkClass} onClick={() => setMobileOpen(false)}>⚙️ Editar perfil</NavLink>
           </SignedIn>
           <SignedOut>
             <SignInButton mode="modal">
