@@ -18,15 +18,160 @@ const GAMES = [
   { name: 'MTG', emoji: '🪄' },
 ]
 
+// Cartas decorativas para el fondo animado
+const BG_CARDS = [
+  {
+    label: 'Charizard',
+    emoji: '🔥',
+    color: 'from-orange-500/30 to-red-600/20',
+    border: 'border-orange-400/30',
+    game: 'Pokémon',
+    rarity: '★★★',
+  },
+  {
+    label: 'Dark Magician',
+    emoji: '🪄',
+    color: 'from-purple-600/30 to-indigo-700/20',
+    border: 'border-purple-400/30',
+    game: 'Yu-Gi-Oh!',
+    rarity: '★★★',
+  },
+  {
+    label: 'Monkey D. Luffy',
+    emoji: '🏴‍☠️',
+    color: 'from-red-500/30 to-yellow-600/20',
+    border: 'border-red-400/30',
+    game: 'One Piece',
+    rarity: '★★★',
+  },
+  {
+    label: 'Goku SSJ',
+    emoji: '⚡',
+    color: 'from-yellow-400/30 to-orange-500/20',
+    border: 'border-yellow-300/30',
+    game: 'Dragon Ball',
+    rarity: '★★★',
+  },
+  {
+    label: 'Black Lotus',
+    emoji: '🌸',
+    color: 'from-slate-400/30 to-gray-600/20',
+    border: 'border-slate-300/30',
+    game: 'MTG',
+    rarity: '★★★',
+  },
+  {
+    label: 'Pikachu VMAX',
+    emoji: '⚡',
+    color: 'from-yellow-300/30 to-amber-500/20',
+    border: 'border-yellow-300/30',
+    game: 'Pokémon',
+    rarity: '★★★',
+  },
+  {
+    label: 'Blue-Eyes Dragon',
+    emoji: '🐉',
+    color: 'from-blue-400/30 to-cyan-600/20',
+    border: 'border-blue-300/30',
+    game: 'Yu-Gi-Oh!',
+    rarity: '★★★',
+  },
+  {
+    label: 'Vegeta SSB',
+    emoji: '💙',
+    color: 'from-blue-600/30 to-violet-700/20',
+    border: 'border-blue-400/30',
+    game: 'Dragon Ball',
+    rarity: '★★★',
+  },
+]
+
+// Componente de banda de cartas animadas
+function CardStrip({ cards, duration, offsetY }: { cards: typeof BG_CARDS; duration: number; offsetY: string }) {
+  // Duplicamos para loop infinito sin salto
+  const doubled = [...cards, ...cards]
+  return (
+    <div
+      className="absolute flex gap-4 pointer-events-none"
+      style={{ top: offsetY }}
+    >
+      <motion.div
+        className="flex gap-4"
+        animate={{ x: ['0%', '-50%'] }}
+        transition={{
+          duration,
+          ease: 'linear',
+          repeat: Infinity,
+        }}
+      >
+        {doubled.map((card, i) => (
+          <div
+            key={i}
+            className={`relative flex-shrink-0 w-28 h-40 rounded-xl border bg-gradient-to-br ${card.color} ${card.border} backdrop-blur-sm flex flex-col items-center justify-center gap-1 overflow-hidden`}
+          >
+            <span className="text-3xl">{card.emoji}</span>
+            <span className="text-[10px] font-bold text-white/80 text-center px-1 leading-tight">{card.label}</span>
+            <span className="text-[9px] text-white/50">{card.game}</span>
+            <span className="text-[9px] text-yellow-300/70">{card.rarity}</span>
+            {/* Brillo decorativo */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none rounded-xl" />
+          </div>
+        ))}
+      </motion.div>
+    </div>
+  )
+}
+
 export function LandingPage() {
   return (
     <div className="overflow-hidden">
       {/* Hero */}
-      <section className="relative min-h-[90vh] flex items-center justify-center px-4">
+      <section className="relative min-h-[90vh] flex items-center justify-center px-4 overflow-hidden">
+
+        {/* ── Fondo: blur glow central ── */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[var(--color-brand)]/10 rounded-full blur-[120px]" />
         </div>
-        <div className="relative max-w-4xl mx-auto text-center">
+
+        {/* ── Bandas de cartas animadas (fondo) ── */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {/* Degradado superior para que las cartas se desvanezcan arriba */}
+          <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-[var(--color-bg)] to-transparent z-10" />
+          {/* Degradado inferior */}
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[var(--color-bg)] to-transparent z-10" />
+          {/* Degradado izquierda */}
+          <div className="absolute top-0 left-0 bottom-0 w-24 bg-gradient-to-r from-[var(--color-bg)] to-transparent z-10" />
+          {/* Degradado derecha */}
+          <div className="absolute top-0 right-0 bottom-0 w-24 bg-gradient-to-l from-[var(--color-bg)] to-transparent z-10" />
+
+          {/* Capa de blur global sobre las cartas */}
+          <div className="absolute inset-0 backdrop-blur-[2px] z-[5]" />
+
+          {/* Banda 1 — más arriba, velocidad normal */}
+          <CardStrip
+            cards={BG_CARDS}
+            duration={28}
+            offsetY="8%"
+          />
+          {/* Banda 2 — medio, velocidad más lenta */}
+          <CardStrip
+            cards={[...BG_CARDS].reverse()}
+            duration={38}
+            offsetY="38%"
+          />
+          {/* Banda 3 — abajo, velocidad media */}
+          <CardStrip
+            cards={BG_CARDS.slice(2)}
+            duration={22}
+            offsetY="65%"
+          />
+
+          {/* Opacidad general de las cartas baja para no tapar el texto */}
+          <div className="absolute inset-0 bg-[var(--color-bg)]/55 z-[6]" />
+        </div>
+
+        {/* ── Contenido del hero (encima de todo) ── */}
+        <div className="relative z-20 max-w-4xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -60,6 +205,7 @@ export function LandingPage() {
               </Link>
             </div>
           </motion.div>
+
           <motion.div
             className="flex flex-wrap justify-center gap-2 mt-12"
             initial={{ opacity: 0 }}
