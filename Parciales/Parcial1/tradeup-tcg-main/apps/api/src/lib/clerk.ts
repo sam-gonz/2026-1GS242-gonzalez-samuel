@@ -29,7 +29,6 @@ export async function requireAuth(c: Context, next: Next) {
   }
 
   try {
-    // ✅ Correct: standalone verifyToken(token, options)
     const payload = await verifyToken(token, {
       secretKey,
       authorizedParties: [
