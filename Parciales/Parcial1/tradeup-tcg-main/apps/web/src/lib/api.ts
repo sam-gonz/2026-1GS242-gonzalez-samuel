@@ -114,6 +114,14 @@ export function useApi() {
       },
       updateShipping: (id: string, shippingStatus: string) =>
         authRequest(`/api/admin/transactions/${id}/shipping`, { method: 'PATCH', body: JSON.stringify({ shippingStatus }) }),
+      listings: (params?: { page?: number; status?: string; search?: string }) => {
+        const qs = params ? '?' + new URLSearchParams(
+          Object.fromEntries(Object.entries(params).filter(([,v]) => v !== undefined).map(([k,v]) => [k, String(v)]))
+        ).toString() : ''
+        return authRequest(`/api/admin/listings${qs}`)
+      },
+      deleteListing: (id: string) =>
+        authRequest(`/api/admin/listings/${id}`, { method: 'DELETE' }),
     },
     users: {
       profile: (id: string) => authRequest(`/api/users/${id}/profile`),
