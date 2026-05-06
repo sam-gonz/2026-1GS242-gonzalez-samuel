@@ -14,15 +14,17 @@ import { transactionRoutes } from './routes/transactions.js'
 import { webhookRoutes } from './routes/webhooks.js'
 import { adminRoutes } from './routes/admin.js'
 import { paymentRoutes } from './routes/payments.js'
-// Agrega el import junto a los demás:
 import { reviewRoutes } from './routes/reviews.js'
+import { notificationRoutes } from './routes/notifications.js'
 
-// Agrega el mount junto a las demás rutas:
 const app = new Hono()
 
 app.use('*', logger())
 app.use('/api/*', cors({
-  origin: process.env['CORS_ORIGIN'] ?? 'http://localhost:3000',
+  origin: [
+    process.env['CORS_ORIGIN'] ?? 'http://localhost:3000',
+    process.env['CORS_ORIGIN_BACKOFFICE'] ?? 'http://localhost:3002',
+  ],
   credentials: true,
 }))
 
@@ -30,7 +32,6 @@ app.use('/uploads/*', serveStatic({ root: './' }))
 
 // Stripe webhook — raw body, before JSON middleware
 app.route('/webhooks', webhookRoutes)
-app.route('/api/reviews', reviewRoutes)
 
 app.route('/api/auth', authRoutes)
 app.route('/api/listings', listingRoutes)
@@ -41,6 +42,8 @@ app.route('/api/users', userRoutes)
 app.route('/api/transactions', transactionRoutes)
 app.route('/api/admin', adminRoutes)
 app.route('/api/payments', paymentRoutes)
+app.route('/api/reviews', reviewRoutes)
+app.route('/api/notifications', notificationRoutes)
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 

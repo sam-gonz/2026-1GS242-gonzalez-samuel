@@ -7,18 +7,20 @@ export const notificationRoutes = new Hono()
 /**
  * GET /api/notifications/summary
  * Returns counts for the navbar badge:
- *  - pendingOffers: offers received waiting for response
- *  - pendingOrders: B2C orders in non-completed state
+ *  - pendingOffers: offers received as seller, waiting for response
+ *  - pendingOrders: orders pending shipping
  */
 notificationRoutes.get('/summary', requireAuth, async (c) => {
   const clerkId = c.get('userId')
 
-  const user = await User.findOne({ clerkId })
-  if (!user) return c.json({ error: 'User not synced' }, 400)
+  const user = await User.findOne({ clerkId }).select('_id').lean()
+  if (!user) return c.json({ pendingOffers: 0, pendingOrders: 0, total: 0 })
 
   const [pendingOffers, pendingOrders] = await Promise.all([
-    Offer.countDocuments({ listing: { $in: [] }, status: 'pending', seller: user._id }),
-    Transaction.countDocuments({ buyer: user._id, status: 'pending', isBuyerPurchase: true }),
+    // Ofertas recibidas como vendedor que aun no han sido respondidas
+    Offer.countDocuments({ seller: user._id, status: 'pending' }),
+    // Ordenes del comprador aun en pending
+    Transaction.countDocuments({ buyer: user._id, status: 'pending' }),
   ])
 
   return c.json({ pendingOffers, pendingOrders, total: pendingOffers + pendingOrders })
