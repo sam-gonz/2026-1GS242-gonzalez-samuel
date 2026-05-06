@@ -1,7 +1,7 @@
 import { createClerkClient, verifyToken } from '@clerk/backend'
 import type { Context, Next } from 'hono'
 
-// ─── Exported type used by types.d.ts ────────────────────────────────────────
+// ─── Exported type used by types.d.ts ────────────────────────────────────────────
 export type AppRole = 'buyer' | 'seller' | 'admin'
 
 // ─── Clerk client (for users.getUser, updateUserMetadata, etc.) ──────────────
@@ -10,9 +10,7 @@ export const clerkClient = createClerkClient({
   publishableKey: process.env['CLERK_PUBLISHABLE_KEY'],
 })
 
-// ─── requireAuth ─────────────────────────────────────────────────────────────
-// verifyToken is a STANDALONE function from @clerk/backend — not a method on
-// the ClerkClient instance. Import it directly and call it with secretKey.
+// ─── requireAuth ────────────────────────────────────────────────────────────
 export async function requireAuth(c: Context, next: Next) {
   const authorization = c.req.header('Authorization')
   const token = authorization?.startsWith('Bearer ')
@@ -37,9 +35,14 @@ export async function requireAuth(c: Context, next: Next) {
       ],
     })
 
+    // Clerk JWT puede incluir el rol en varias ubicaciones segun la version del SDK.
+    // Probamos todas las variantes posibles: camelCase, snake_case y nesting en metadata.
+    const p = payload as any
     const role: AppRole =
-      (payload as any)?.public_metadata?.role ??
-      (payload as any)?.metadata?.role ??
+      p?.publicMetadata?.role ??        // clerk-react v5+ / JWT claims
+      p?.public_metadata?.role ??       // versiones anteriores
+      p?.metadata?.role ??              // algunas versiones intermedias
+      p?.['public_metadata']?.role ??   // acceso por key string
       'buyer'
 
     c.set('userId', payload.sub)
@@ -51,7 +54,7 @@ export async function requireAuth(c: Context, next: Next) {
   }
 }
 
-// ─── requireSeller ────────────────────────────────────────────────────────────
+// ─── requireSeller ────────────────────────────────────────────────────
 export async function requireSeller(c: Context, next: Next) {
   let passed = false
   await requireAuth(c, async () => { passed = true })
@@ -64,7 +67,7 @@ export async function requireSeller(c: Context, next: Next) {
   await next()
 }
 
-// ─── requireAdmin ─────────────────────────────────────────────────────────────
+// ─── requireAdmin ─────────────────────────────────────────────────────
 export async function requireAdmin(c: Context, next: Next) {
   let passed = false
   await requireAuth(c, async () => { passed = true })
