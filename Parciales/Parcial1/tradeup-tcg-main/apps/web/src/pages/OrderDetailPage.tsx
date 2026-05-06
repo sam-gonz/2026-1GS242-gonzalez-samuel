@@ -52,17 +52,14 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
     <div className="flex gap-1">
       {[1,2,3,4,5].map(s => (
         <button
-          key={s}
-          type="button"
+          key={s} type="button"
           onClick={() => onChange(s)}
           onMouseEnter={() => setHover(s)}
           onMouseLeave={() => setHover(0)}
           className={`text-2xl transition-transform hover:scale-110 ${
             s <= (hover || value) ? 'text-yellow-400' : 'text-[var(--color-muted)]/30'
           }`}
-        >
-          ★
-        </button>
+        >★</button>
       ))}
     </div>
   )
@@ -110,7 +107,9 @@ export function OrderDetailPage() {
   const snap = tx.storeItemSnapshot
   const statusCfg = STATUS_CFG[tx.status] ?? STATUS_CFG.pending
   const date = new Date(tx.createdAt).toLocaleDateString('es-PA', { day: '2-digit', month: 'long', year: 'numeric' })
-  const canReview = tx.reviewEligible && !isB2C && !myReview && !reviewSent
+
+  // Review disponible para todos los pedidos completados (C2C y B2C)
+  const canReview = tx.reviewEligible && !myReview && !reviewSent
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-5">
@@ -122,8 +121,8 @@ export function OrderDetailPage() {
       </div>
 
       {/* Carta / item */}
-      <div className="p-5 rounded-2xl bg-[var(--color-surface-1)] border border-[var(--color-border)] flex gap-4">
-        <div className="w-16 h-22 rounded-lg overflow-hidden bg-[var(--color-surface-3)] shrink-0">
+      <div className="p-5 rounded-2xl bg-[var(--color-surface-2)] border border-[var(--color-border)] flex gap-4">
+        <div className="w-16 rounded-lg overflow-hidden bg-[var(--color-surface-3)] shrink-0" style={{height: '88px'}}>
           {(snap?.imageUrl || tx.offer?.listing?.catalogCard?.imageUrl) ? (
             <img
               src={snap?.imageUrl ?? tx.offer?.listing?.catalogCard?.imageUrl}
@@ -146,6 +145,11 @@ export function OrderDetailPage() {
               {snap.condition}
             </span>
           )}
+          {isB2C && (
+            <span className="inline-block mt-1 ml-1 px-2 py-0.5 text-xs rounded bg-[var(--color-brand)]/20 text-[var(--color-brand-light)] border border-[var(--color-brand)]/30">
+              Tienda oficial
+            </span>
+          )}
         </div>
         {tx.grossAmount && (
           <div className="text-right shrink-0">
@@ -157,14 +161,14 @@ export function OrderDetailPage() {
 
       {/* Tracking de envío */}
       {tx.status === 'completed' && (
-        <div className="p-5 rounded-2xl bg-[var(--color-surface-1)] border border-[var(--color-border)]">
+        <div className="p-5 rounded-2xl bg-[var(--color-surface-2)] border border-[var(--color-border)]">
           <h3 className="text-sm font-semibold text-white mb-4">📦 Estado de envío</h3>
           <ShippingTracker current={tx.shippingStatus ?? 'pending'} />
         </div>
       )}
 
       {/* Detalles */}
-      <div className="p-5 rounded-2xl bg-[var(--color-surface-1)] border border-[var(--color-border)] space-y-3">
+      <div className="p-5 rounded-2xl bg-[var(--color-surface-2)] border border-[var(--color-border)] space-y-3">
         <h3 className="text-sm font-semibold text-white">Detalles</h3>
         <div className="grid grid-cols-2 gap-y-2 text-sm">
           <span className="text-[var(--color-muted)]">Fecha</span>
@@ -178,8 +182,7 @@ export function OrderDetailPage() {
               <span className="text-[var(--color-muted)]">Stripe PI</span>
               <a
                 href={`https://dashboard.stripe.com/test/payments/${tx.stripePaymentIntentId}`}
-                target="_blank"
-                rel="noopener noreferrer"
+                target="_blank" rel="noopener noreferrer"
                 className="text-[var(--color-brand-light)] text-right text-xs hover:underline truncate"
               >
                 {tx.stripePaymentIntentId.slice(-14)}
@@ -191,14 +194,16 @@ export function OrderDetailPage() {
 
       {/* Review */}
       {canReview && (
-        <div className="p-5 rounded-2xl bg-[var(--color-surface-1)] border border-[var(--color-border)]">
-          <h3 className="text-sm font-semibold text-white mb-3">⭐ Deja una reseña</h3>
+        <div className="p-5 rounded-2xl bg-[var(--color-surface-2)] border border-[var(--color-border)]">
+          <h3 className="text-sm font-semibold text-white mb-1">⭐ Deja una reseña</h3>
+          <p className="text-xs text-[var(--color-muted)] mb-3">
+            {isB2C ? 'Califica tu experiencia de compra en la tienda oficial' : 'Califica tu experiencia con este vendedor'}
+          </p>
           <StarPicker value={rating} onChange={setRating} />
           <textarea
             className="w-full mt-3 p-3 rounded-xl bg-[var(--color-surface-3)] border border-[var(--color-border)] text-sm text-white placeholder:text-[var(--color-muted)] resize-none focus:outline-none focus:border-[var(--color-brand)]"
-            rows={3}
-            maxLength={500}
-            placeholder="Cuéntanos sobre la transacción... (opcional)"
+            rows={3} maxLength={500}
+            placeholder={isB2C ? 'Cuéntanos sobre tu compra en la tienda... (opcional)' : 'Cuéntanos sobre la transacción... (opcional)'}
             value={comment}
             onChange={(e) => setComment(e.target.value)}
           />
@@ -217,12 +222,12 @@ export function OrderDetailPage() {
 
       {reviewSent && (
         <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm text-center">
-          ✅ Reseña enviada. ¡Gracias!
+          ✅ ¡Gracias por tu reseña!
         </div>
       )}
 
       {myReview && (
-        <div className="p-4 rounded-xl bg-[var(--color-surface-1)] border border-[var(--color-border)]">
+        <div className="p-4 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)]">
           <p className="text-xs text-[var(--color-muted)] mb-1">Tu reseña</p>
           <div className="flex gap-0.5 mb-1">
             {[1,2,3,4,5].map(s => (

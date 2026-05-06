@@ -9,6 +9,19 @@ const CONDITION_LABELS: Record<string, string> = {
   good: 'Good', played: 'Played', poor: 'Poor',
 }
 
+function StarRating({ value }: { value: number }) {
+  return (
+    <div className="flex gap-0.5">
+      {[1,2,3,4,5].map((s) => (
+        <svg key={s} className={`w-3.5 h-3.5 ${s <= Math.round(value) ? 'text-yellow-400' : 'text-[var(--color-muted)]/30'}`}
+          fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+        </svg>
+      ))}
+    </div>
+  )
+}
+
 export function ListingDetailPage() {
   const { id } = useParams<{ id: string }>()
   const apiFn = useApi()
@@ -77,7 +90,7 @@ export function ListingDetailPage() {
       <Link to="/marketplace" className="text-sm text-[var(--color-muted)] hover:text-white transition-colors mb-6 inline-block">← Volver al marketplace</Link>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
 
-        {/* Photo */}
+        {/* Foto */}
         <div>
           <div className="aspect-[3/4] rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] overflow-hidden">
             {image
@@ -95,7 +108,7 @@ export function ListingDetailPage() {
           )}
         </div>
 
-        {/* Details */}
+        {/* Detalles */}
         <div>
           <p className="text-xs text-[var(--color-muted)] uppercase tracking-wider mb-1">{card?.game}</p>
           <h1 className="font-display text-2xl font-bold text-white mb-1">{card?.name}</h1>
@@ -144,14 +157,27 @@ export function ListingDetailPage() {
             )}
           </div>
 
-          {/* Seller */}
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] mb-5">
-            <div className="w-10 h-10 rounded-full bg-[var(--color-brand)]/20 flex items-center justify-center text-lg">👤</div>
-            <div>
-              <p className="text-sm font-medium text-white">{listing.seller?.username}</p>
-              <p className="text-xs text-[var(--color-muted)]">⭐ {listing.seller?.reputation?.toFixed(1) ?? '–'} · {listing.seller?.reviewCount ?? 0} reviews</p>
+          {/* Seller — clickeable */}
+          <Link
+            to={`/users/${listing.seller?._id}`}
+            className="flex items-center gap-3 p-4 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] mb-5 hover:border-[var(--color-brand)]/50 transition-colors group"
+          >
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-brand)] to-blue-400 flex items-center justify-center text-white font-bold text-sm shrink-0">
+              {listing.seller?.username?.[0]?.toUpperCase() ?? '?'}
             </div>
-          </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white group-hover:text-[var(--color-brand-light)] transition-colors">
+                {listing.seller?.username}
+              </p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <StarRating value={listing.seller?.reputation ?? 0} />
+                <span className="text-xs text-[var(--color-muted)]">
+                  {listing.seller?.reputation?.toFixed(1) ?? '0.0'} · {listing.seller?.reviewCount ?? 0} reviews
+                </span>
+              </div>
+            </div>
+            <span className="text-[var(--color-muted)] text-sm group-hover:text-white transition-colors">→</span>
+          </Link>
 
           <SignedOut>
             <SignInButton mode="modal">
@@ -185,12 +211,8 @@ export function ListingDetailPage() {
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] text-sm">$</span>
                       <input
-                        type="number"
-                        step="0.01"
-                        min={minBidDollars}
-                        placeholder={minBidDollars}
-                        value={moneyAmount}
-                        onChange={(e) => setMoneyAmount(e.target.value)}
+                        type="number" step="0.01" min={minBidDollars} placeholder={minBidDollars}
+                        value={moneyAmount} onChange={(e) => setMoneyAmount(e.target.value)}
                         className="w-full pl-7 pr-4 py-2.5 rounded-lg bg-[var(--color-surface-2)] border border-[var(--color-border)] text-white text-sm focus:outline-none focus:border-[var(--color-brand)] transition-colors"
                       />
                     </div>
