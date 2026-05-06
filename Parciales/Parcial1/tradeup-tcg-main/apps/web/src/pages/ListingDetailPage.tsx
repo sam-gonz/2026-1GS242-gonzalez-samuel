@@ -26,11 +26,27 @@ export function ListingDetailPage() {
 
   const listing = data?.listing
   const card = listing?.catalogCard
-  // Prioridad: foto subida → imageUrl del catálogo
   const image = listing?.photos?.[0] ?? card?.imageUrl ?? null
+  const topBid: number | null = listing?.topBid ?? null
+  const bidCount: number = listing?.bidCount ?? 0
+
+  // Minimum bid = topBid + 1 cent, or 1 cent if no bids
+  const minBidCents = topBid != null ? topBid + 1 : 1
+  const minBidDollars = (minBidCents / 100).toFixed(2)
+
+  function handleMoneyChange(val: string) {
+    setMoneyAmount(val)
+  }
 
   async function sendOffer() {
     if (!offerType) return
+    if ((offerType === 'money' || offerType === 'mixed') && moneyAmount) {
+      const cents = Math.round(parseFloat(moneyAmount) * 100)
+      if (cents < minBidCents) {
+        setError(`La oferta m\u00ednima es $${minBidDollars}`)
+        return
+      }
+    }
     setSending(true)
     setError('')
     try {
@@ -65,6 +81,7 @@ export function ListingDetailPage() {
     <div className="max-w-5xl mx-auto px-4 py-10">
       <Link to="/marketplace" className="text-sm text-[var(--color-muted)] hover:text-white transition-colors mb-6 inline-block">← Volver al marketplace</Link>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+
         {/* Photo */}
         <div>
           <div className="aspect-[3/4] rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] overflow-hidden">
@@ -72,7 +89,6 @@ export function ListingDetailPage() {
               ? <img src={image} alt={card?.name} className="w-full h-full object-cover" />
               : <div className="w-full h-full flex items-center justify-center text-6xl text-[var(--color-muted)]/20">🃏</div>}
           </div>
-          {/* Miniaturas de fotos adicionales */}
           {listing.photos?.length > 1 && (
             <div className="flex gap-2 mt-2">
               {listing.photos.map((p: string, i: number) => (
@@ -88,32 +104,60 @@ export function ListingDetailPage() {
         <div>
           <p className="text-xs text-[var(--color-muted)] uppercase tracking-wider mb-1">{card?.game}</p>
           <h1 className="font-display text-2xl font-bold text-white mb-1">{card?.name}</h1>
-          <p className="text-[var(--color-muted)] text-sm mb-6">{card?.set}{card?.cardNumber ? ` · #${card.cardNumber}` : ''}{card?.rarity ? ` · ${card.rarity}` : ''}</p>
+          <p className="text-[var(--color-muted)] text-sm mb-4">{card?.set}{card?.cardNumber ? ` \u00b7 #${card.cardNumber}` : ''}{card?.rarity ? ` \u00b7 ${card.rarity}` : ''}</p>
 
-          <div className="flex items-center gap-4 mb-6">
+          <div className="flex items-center gap-4 mb-4">
             <span className="px-3 py-1 rounded-lg bg-[var(--color-surface-3)] border border-[var(--color-border)] text-sm">
               {CONDITION_LABELS[listing.condition] ?? listing.condition}
             </span>
             {listing.askingPrice && (
               <span className="text-2xl font-bold text-[var(--color-brand-light)]">${(listing.askingPrice / 100).toFixed(2)}</span>
             )}
-            {!listing.askingPrice && (
-              <span className="text-sm text-blue-400">↔ Solo trade</span>
+            {!listing.askingPrice && <span className="text-sm text-blue-400">⇔ Solo trade</span>}
+          </div>
+
+          {/* Top bid panel */}
+          <div className={`rounded-xl p-4 mb-5 border ${
+            topBid != null
+              ? 'bg-[var(--color-brand)]/10 border-[var(--color-brand)]/30'
+              : 'bg-[var(--color-surface-2)] border-[var(--color-border)]'
+          }`}>
+            {topBid != null ? (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-[var(--color-brand-light)] font-semibold uppercase tracking-wide">Oferta m\u00e1s alta</p>
+                  <p className="text-2xl font-bold text-white mt-0.5">${(topBid / 100).toFixed(2)}</p>
+                  <p className="text-xs text-[var(--color-muted)] mt-0.5">{bidCount} oferta{bidCount !== 1 ? 's' : ''} activa{bidCount !== 1 ? 's' : ''}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-[var(--color-muted)]">Oferta m\u00ednima</p>
+                  <p className="text-lg font-bold text-[var(--color-brand-light)]">${minBidDollars}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-[var(--color-brand)]/20 flex items-center justify-center text-base">🏷️</div>
+                <div>
+                  <p className="text-sm font-medium text-white">Sin ofertas a\u00fan</p>
+                  <p className="text-xs text-[var(--color-muted)]">\u00a1S\u00e9 el primero en ofertar!</p>
+                </div>
+              </div>
             )}
           </div>
 
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] mb-6">
+          {/* Seller */}
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] mb-5">
             <div className="w-10 h-10 rounded-full bg-[var(--color-brand)]/20 flex items-center justify-center text-lg">👤</div>
             <div>
               <p className="text-sm font-medium text-white">{listing.seller?.username}</p>
-              <p className="text-xs text-[var(--color-muted)]">⭐ {listing.seller?.reputation?.toFixed(1) ?? '–'} · {listing.seller?.reviewCount ?? 0} reviews</p>
+              <p className="text-xs text-[var(--color-muted)]">⭐ {listing.seller?.reputation?.toFixed(1) ?? '\u2013'} \u00b7 {listing.seller?.reviewCount ?? 0} reviews</p>
             </div>
           </div>
 
           <SignedOut>
             <SignInButton mode="modal">
               <button className="w-full py-3 rounded-xl bg-[var(--color-brand)] text-white font-semibold hover:bg-[var(--color-brand)]/90 transition-all">
-                Inicia sesión para hacer una oferta
+                Inicia sesi\u00f3n para hacer una oferta
               </button>
             </SignInButton>
           </SignedOut>
@@ -136,13 +180,28 @@ export function ListingDetailPage() {
                     </button>
                   ))}
                 </div>
+
                 {(offerType === 'money' || offerType === 'mixed') && (
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] text-sm">$</span>
-                    <input type="number" placeholder="0.00" value={moneyAmount} onChange={(e) => setMoneyAmount(e.target.value)}
-                      className="w-full pl-7 pr-4 py-2.5 rounded-lg bg-[var(--color-surface-2)] border border-[var(--color-border)] text-white text-sm focus:outline-none focus:border-[var(--color-brand)] transition-colors" />
+                  <div className="space-y-1">
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] text-sm">$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min={minBidDollars}
+                        placeholder={minBidDollars}
+                        value={moneyAmount}
+                        onChange={(e) => handleMoneyChange(e.target.value)}
+                        className="w-full pl-7 pr-4 py-2.5 rounded-lg bg-[var(--color-surface-2)] border border-[var(--color-border)] text-white text-sm focus:outline-none focus:border-[var(--color-brand)] transition-colors"
+                      />
+                    </div>
+                    <p className="text-xs text-[var(--color-muted)]">
+                      M\u00ednimo: <span className="text-[var(--color-brand-light)] font-medium">${minBidDollars}</span>
+                      {topBid != null && <span className="ml-1">(debe superar la oferta actual)</span>}
+                    </p>
                   </div>
                 )}
+
                 {error && <p className="text-red-400 text-xs">{error}</p>}
                 <button onClick={sendOffer} disabled={!offerType || sending}
                   className="w-full py-3 rounded-xl bg-[var(--color-brand)] text-white font-semibold hover:bg-[var(--color-brand)]/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
