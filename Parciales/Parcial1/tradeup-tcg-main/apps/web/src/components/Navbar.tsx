@@ -28,7 +28,6 @@ export function Navbar() {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const { user } = useUser()
 
-  // Detecta si el usuario logueado es admin via Clerk publicMetadata
   const isAdmin = user?.publicMetadata?.role === 'admin'
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -45,8 +44,12 @@ export function Navbar() {
     <header className="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 backdrop-blur-md">
       <nav className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 shrink-0" onClick={() => setMobileOpen(false)}>
-          <span className="text-2xl">🃏</span>
+        <Link to="/" className="flex items-center gap-2.5 shrink-0" onClick={() => setMobileOpen(false)}>
+          <img
+            src="https://res.cloudinary.com/dzq9icjrl/image/upload/v1778030164/Gemini_Generated_Image_a5rabaa5rabaa5ra-Photoroom_ctkjbg.png"
+            alt="TradeUp TCG"
+            className="h-9 w-auto object-contain"
+          />
           <span className="font-display font-bold text-lg tracking-tight text-white">
             TradeUp
             <span className="text-[var(--color-brand-light)] ml-1 text-sm font-normal">TCG</span>
@@ -76,7 +79,6 @@ export function Navbar() {
               + Publicar carta
             </Link>
 
-            {/* Dropdown de perfil */}
             <div className="relative">
               <button
                 onClick={() => setProfileMenuOpen(o => !o)}
@@ -84,9 +86,7 @@ export function Navbar() {
                 aria-label="Menu de usuario"
               >
                 <UserButton appearance={{ elements: { avatarBox: 'w-8 h-8' } }} />
-                <span className="hidden sm:block text-xs text-[var(--color-muted)] hover:text-white transition-colors">
-                  ▾
-                </span>
+                <span className="hidden sm:block text-xs text-[var(--color-muted)] hover:text-white transition-colors">▾</span>
               </button>
 
               {profileMenuOpen && (
@@ -99,24 +99,23 @@ export function Navbar() {
                     onClick={() => setProfileMenuOpen(false)}
                     className="flex items-center gap-2 px-4 py-2.5 text-sm text-[var(--color-muted)] hover:text-white hover:bg-[var(--color-surface-2)] transition-colors"
                   >
-                    📊 Dashboard
+                    Dashboard
                   </Link>
                   <Link
                     to="/profile/settings"
                     onClick={() => setProfileMenuOpen(false)}
                     className="flex items-center gap-2 px-4 py-2.5 text-sm text-[var(--color-muted)] hover:text-white hover:bg-[var(--color-surface-2)] transition-colors"
                   >
-                    ⚙️ Editar perfil
+                    Editar perfil
                   </Link>
                   <Link
                     to="/orders"
                     onClick={() => setProfileMenuOpen(false)}
                     className="flex items-center gap-2 px-4 py-2.5 text-sm text-[var(--color-muted)] hover:text-white hover:bg-[var(--color-surface-2)] transition-colors"
                   >
-                    📦 Mis Pedidos
+                    Mis Pedidos
                   </Link>
 
-                  {/* Link al Admin Panel - solo visible para admins */}
                   {isAdmin && (
                     <>
                       <div className="mx-3 my-1 border-t border-[var(--color-border)]" />
@@ -125,7 +124,7 @@ export function Navbar() {
                         onClick={() => setProfileMenuOpen(false)}
                         className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-[var(--color-brand-light)] hover:text-white hover:bg-[var(--color-brand)]/20 transition-colors rounded-b-xl"
                       >
-                        🛡️ Admin Panel
+                        Admin Panel
                       </Link>
                     </>
                   )}
@@ -141,7 +140,6 @@ export function Navbar() {
             </SignInButton>
           </SignedOut>
 
-          {/* Hamburguesa mobile */}
           <button
             className="md:hidden flex flex-col gap-1.5 p-2"
             onClick={() => setMobileOpen(o => !o)}
@@ -154,7 +152,6 @@ export function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 space-y-1">
           <NavLink to="/marketplace" className={mobileLinkClass} onClick={() => setMobileOpen(false)}>Marketplace</NavLink>
@@ -163,9 +160,9 @@ export function Navbar() {
             <NavLink to="/dashboard" className={mobileLinkClass} onClick={() => setMobileOpen(false)}>Dashboard</NavLink>
             <NavLink to="/orders" className={mobileLinkClass} onClick={() => setMobileOpen(false)}>Mis Pedidos</NavLink>
             <NavLink to="/listings/new" className={mobileLinkClass} onClick={() => setMobileOpen(false)}>+ Publicar carta</NavLink>
-            <NavLink to="/profile/settings" className={mobileLinkClass} onClick={() => setMobileOpen(false)}>⚙️ Editar perfil</NavLink>
+            <NavLink to="/profile/settings" className={mobileLinkClass} onClick={() => setMobileOpen(false)}>Editar perfil</NavLink>
             {isAdmin && (
-              <NavLink to="/admin" className={mobileLinkClass} onClick={() => setMobileOpen(false)}>🛡️ Admin Panel</NavLink>
+              <NavLink to="/admin" className={mobileLinkClass} onClick={() => setMobileOpen(false)}>Admin Panel</NavLink>
             )}
           </SignedIn>
           <SignedOut>

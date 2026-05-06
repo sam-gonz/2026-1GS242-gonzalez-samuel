@@ -79,7 +79,6 @@ export function ListingDetailPage() {
 
   if (isError || !listing) return (
     <div className="max-w-5xl mx-auto px-4 py-16 text-center">
-      <p className="text-4xl mb-4">😕</p>
       <p className="text-[var(--color-muted)]">Listing no encontrado.</p>
       <Link to="/marketplace" className="text-[var(--color-brand-light)] hover:underline mt-4 inline-block">← Volver</Link>
     </div>
@@ -90,12 +89,11 @@ export function ListingDetailPage() {
       <Link to="/marketplace" className="text-sm text-[var(--color-muted)] hover:text-white transition-colors mb-6 inline-block">← Volver al marketplace</Link>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
 
-        {/* Foto */}
         <div>
           <div className="aspect-[3/4] rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] overflow-hidden">
             {image
               ? <img src={image} alt={card?.name} className="w-full h-full object-cover" />
-              : <div className="w-full h-full flex items-center justify-center text-6xl text-[var(--color-muted)]/20">🃏</div>}
+              : <div className="w-full h-full flex items-center justify-center text-sm text-[var(--color-muted)]">Sin imagen</div>}
           </div>
           {listing.photos?.length > 1 && (
             <div className="flex gap-2 mt-2">
@@ -108,7 +106,6 @@ export function ListingDetailPage() {
           )}
         </div>
 
-        {/* Detalles */}
         <div>
           <p className="text-xs text-[var(--color-muted)] uppercase tracking-wider mb-1">{card?.game}</p>
           <h1 className="font-display text-2xl font-bold text-white mb-1">{card?.name}</h1>
@@ -125,10 +122,9 @@ export function ListingDetailPage() {
             {listing.askingPrice && (
               <span className="text-2xl font-bold text-[var(--color-brand-light)]">${(listing.askingPrice / 100).toFixed(2)}</span>
             )}
-            {!listing.askingPrice && <span className="text-sm text-blue-400">⇔ Solo trade</span>}
+            {!listing.askingPrice && <span className="text-sm text-blue-400">Solo trade</span>}
           </div>
 
-          {/* Top bid panel */}
           <div className={`rounded-xl p-4 mb-5 border ${
             topBid != null
               ? 'bg-[var(--color-brand)]/10 border-[var(--color-brand)]/30'
@@ -147,17 +143,13 @@ export function ListingDetailPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[var(--color-brand)]/20 flex items-center justify-center text-base">🏷️</div>
-                <div>
-                  <p className="text-sm font-medium text-white">Sin ofertas aún</p>
-                  <p className="text-xs text-[var(--color-muted)]">¡Sé el primero en ofertar!</p>
-                </div>
+              <div>
+                <p className="text-sm font-medium text-white">Sin ofertas aún</p>
+                <p className="text-xs text-[var(--color-muted)] mt-0.5">Sé el primero en ofertar</p>
               </div>
             )}
           </div>
 
-          {/* Seller — clickeable */}
           <Link
             to={`/users/${listing.seller?._id}`}
             className="flex items-center gap-3 p-4 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] mb-5 hover:border-[var(--color-brand)]/50 transition-colors group"
@@ -189,7 +181,7 @@ export function ListingDetailPage() {
 
           <SignedIn>
             {success ? (
-              <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm text-center">✅ Oferta enviada exitosamente</div>
+              <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm text-center">Oferta enviada exitosamente</div>
             ) : (
               <div className="space-y-3">
                 <p className="text-sm font-medium text-white">Hacer una oferta</p>
@@ -201,7 +193,7 @@ export function ListingDetailPage() {
                           ? 'bg-[var(--color-brand)] border-[var(--color-brand)] text-white'
                           : 'bg-[var(--color-surface-2)] border-[var(--color-border)] text-[var(--color-muted)] hover:text-white'
                       }`}>
-                      {t === 'money' ? '💵 Dinero' : t === 'cards' ? '🃏 Cartas' : '🔀 Mixta'}
+                      {t === 'money' ? 'Dinero' : t === 'cards' ? 'Cartas' : 'Mixta'}
                     </button>
                   ))}
                 </div>

@@ -96,7 +96,6 @@ export function OrderDetailPage() {
 
   if (isError || !data?.transaction) return (
     <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-      <p className="text-4xl mb-4">😕</p>
       <p className="text-[var(--color-muted)] mb-4">Pedido no encontrado.</p>
       <Link to="/orders" className="text-[var(--color-brand-light)] hover:underline">← Mis pedidos</Link>
     </div>
@@ -107,8 +106,6 @@ export function OrderDetailPage() {
   const snap = tx.storeItemSnapshot
   const statusCfg = STATUS_CFG[tx.status] ?? STATUS_CFG.pending
   const date = new Date(tx.createdAt).toLocaleDateString('es-PA', { day: '2-digit', month: 'long', year: 'numeric' })
-
-  // Review disponible para todos los pedidos completados (C2C y B2C)
   const canReview = tx.reviewEligible && !myReview && !reviewSent
 
   return (
@@ -120,7 +117,6 @@ export function OrderDetailPage() {
         </span>
       </div>
 
-      {/* Carta / item */}
       <div className="p-5 rounded-2xl bg-[var(--color-surface-2)] border border-[var(--color-border)] flex gap-4">
         <div className="w-16 rounded-lg overflow-hidden bg-[var(--color-surface-3)] shrink-0" style={{height: '88px'}}>
           {(snap?.imageUrl || tx.offer?.listing?.catalogCard?.imageUrl) ? (
@@ -130,7 +126,7 @@ export function OrderDetailPage() {
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-2xl">🃏</div>
+            <div className="w-full h-full flex items-center justify-center text-xs text-[var(--color-muted)]">Sin imagen</div>
           )}
         </div>
         <div className="flex-1">
@@ -159,15 +155,13 @@ export function OrderDetailPage() {
         )}
       </div>
 
-      {/* Tracking de envío */}
       {tx.status === 'completed' && (
         <div className="p-5 rounded-2xl bg-[var(--color-surface-2)] border border-[var(--color-border)]">
-          <h3 className="text-sm font-semibold text-white mb-4">📦 Estado de envío</h3>
+          <h3 className="text-sm font-semibold text-white mb-4">Estado de envío</h3>
           <ShippingTracker current={tx.shippingStatus ?? 'pending'} />
         </div>
       )}
 
-      {/* Detalles */}
       <div className="p-5 rounded-2xl bg-[var(--color-surface-2)] border border-[var(--color-border)] space-y-3">
         <h3 className="text-sm font-semibold text-white">Detalles</h3>
         <div className="grid grid-cols-2 gap-y-2 text-sm">
@@ -192,10 +186,9 @@ export function OrderDetailPage() {
         </div>
       </div>
 
-      {/* Review */}
       {canReview && (
         <div className="p-5 rounded-2xl bg-[var(--color-surface-2)] border border-[var(--color-border)]">
-          <h3 className="text-sm font-semibold text-white mb-1">⭐ Deja una reseña</h3>
+          <h3 className="text-sm font-semibold text-white mb-1">Dejar una reseña</h3>
           <p className="text-xs text-[var(--color-muted)] mb-3">
             {isB2C ? 'Califica tu experiencia de compra en la tienda oficial' : 'Califica tu experiencia con este vendedor'}
           </p>
@@ -222,7 +215,7 @@ export function OrderDetailPage() {
 
       {reviewSent && (
         <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm text-center">
-          ✅ ¡Gracias por tu reseña!
+          Reseña enviada. Gracias.
         </div>
       )}
 
