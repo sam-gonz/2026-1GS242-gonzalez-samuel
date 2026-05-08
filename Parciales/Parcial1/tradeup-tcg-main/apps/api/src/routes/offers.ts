@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { requireAuth } from '../lib/clerk.js'
-import { stripe, createPaymentIntentHold, calculateCommission } from '../lib/stripe.js'
 import { Offer, Listing, User, Transaction } from '@tradeup/db'
 import { getOfferExpiryDate } from '@tradeup/shared'
 
@@ -80,38 +79,18 @@ offerRoutes.post('/', requireAuth, async (c) => {
     return c.json({ error: 'You already have a pending offer on this listing' }, 409)
   }
 
-  let stripePaymentIntentId: string | undefined
-  let stripeRequiresOnboarding = false
-
-  if (type === 'money' || type === 'mixed') {
-    if (seller.stripeConnectStatus !== 'active') {
-      stripeRequiresOnboarding = true
-    } else {
-      const amount = moneyAmount!
-      const pi = await createPaymentIntentHold(amount, seller.stripeConnectAccountId!)
-      stripePaymentIntentId = pi.id
-    }
-  }
-
   const offer = await Offer.create({
-    listing:              listing._id,
-    buyer:                buyer._id,
-    seller:               seller._id,
+    listing:      listing._id,
+    buyer:        buyer._id,
+    seller:       seller._id,
     type,
     moneyAmount,
-    offeredCards:         offeredCards ?? [],
-    stripePaymentIntentId,
-    status:               'pending',
-    expiresAt:            getOfferExpiryDate(),
+    offeredCards: offeredCards ?? [],
+    status:       'pending',
+    expiresAt:    getOfferExpiryDate(),
   })
 
-  return c.json({
-    message: 'Offer created',
-    offer,
-    ...(stripeRequiresOnboarding && {
-      warning: 'Seller has not connected their Stripe account yet.',
-    }),
-  }, 201)
+  return c.json({ message: 'Offer created', offer }, 201)
 })
 
 // POST /api/offers/:id/accept
@@ -135,76 +114,41 @@ offerRoutes.post('/:id/accept', requireAuth, async (c) => {
     return c.json({ error: 'Offer has expired' }, 400)
   }
 
-  // Decline all other pending offers on this listing
   const listingId = (offer as any).listing._id ?? (offer as any).listing
+
+  // Declinar todas las demas ofertas pendientes del mismo listing
   await Offer.updateMany(
     { listing: listingId, _id: { $ne: offer._id }, status: 'pending' },
     { status: 'declined' },
   )
 
-  // ─ Trade only ────────────────────────────────────────────────────────────
-  if (offer.type === 'cards') {
-    await Promise.all([
-      Listing.findByIdAndUpdate(listingId, { status: 'traded' }),
-      ...offer.offeredCards.map((lid) => Listing.findByIdAndUpdate(lid, { status: 'traded' })),
-    ])
-    await Offer.findByIdAndUpdate(id, { status: 'accepted' })
-
-    const transaction = await Transaction.create({
-      offer:          offer._id,
-      buyer:          offer.buyer,
-      seller:         offer.seller,
-      type:           'c2c_trade',
-      status:         'awaiting_shipment',
-      reviewEligible: false,
-    })
-
-    return c.json({
-      message: 'Trade accepted. Coordinate the exchange via chat.',
-      transaction,
-      chatTransactionId: String(transaction._id),
-    })
-  }
-
-  // ─ Money or Mixed ────────────────────────────────────────────────────────
-  if (seller.stripeConnectStatus !== 'active') {
-    return c.json({
-      error: 'You must complete Stripe Connect onboarding before accepting money offers.',
-      onboardingRequired: true,
-    }, 402)
-  }
-
-  if (!offer.stripePaymentIntentId) {
-    return c.json({ error: 'No payment intent found. Buyer may need to re-submit.' }, 400)
-  }
-
-  const pi = await stripe.paymentIntents.capture(offer.stripePaymentIntentId)
-
-  const gross      = offer.moneyAmount!
-  const commission = calculateCommission(gross)
-  const net        = gross - commission
-
+  // Marcar listing
+  const newListingStatus = offer.type === 'money' ? 'sold' : 'traded'
   await Promise.all([
-    Listing.findByIdAndUpdate(listingId, { status: offer.type === 'mixed' ? 'traded' : 'sold' }),
+    Listing.findByIdAndUpdate(listingId, { status: newListingStatus }),
     ...offer.offeredCards.map((lid) => Listing.findByIdAndUpdate(lid, { status: 'traded' })),
   ])
+
   await Offer.findByIdAndUpdate(id, { status: 'accepted' })
 
+  // Crear transaccion — usuarios coordinan pago/envio via chat
+  const txType =
+    offer.type === 'cards' ? 'c2c_trade'
+    : offer.type === 'mixed' ? 'c2c_mixed'
+    : 'c2c_money'
+
   const transaction = await Transaction.create({
-    offer:                offer._id,
-    buyer:                offer.buyer,
-    seller:               offer.seller,
-    type:                 offer.type === 'mixed' ? 'c2c_mixed' : 'c2c_money',
-    grossAmount:          gross,
-    commissionAmount:     commission,
-    netAmount:            net,
-    stripePaymentIntentId: pi.id,
-    status:               'awaiting_shipment',
-    reviewEligible:       false,
+    offer:          offer._id,
+    buyer:          offer.buyer,
+    seller:         offer.seller,
+    type:           txType,
+    grossAmount:    offer.moneyAmount,
+    status:         'awaiting_shipment',
+    reviewEligible: false,
   })
 
   return c.json({
-    message: 'Offer accepted. Coordinate the shipment via chat.',
+    message: 'Offer accepted. Coordinate via chat.',
     transaction,
     chatTransactionId: String(transaction._id),
   })
@@ -223,12 +167,8 @@ offerRoutes.post('/:id/decline', requireAuth, async (c) => {
   if (String(offer.seller) !== String(seller._id)) return c.json({ error: 'Forbidden' }, 403)
   if (offer.status !== 'pending') return c.json({ error: `Offer is already ${offer.status}` }, 400)
 
-  if (offer.stripePaymentIntentId) {
-    await stripe.paymentIntents.cancel(offer.stripePaymentIntentId)
-  }
-
   await Offer.findByIdAndUpdate(id, { status: 'declined' })
-  return c.json({ message: 'Offer declined and payment hold released.' })
+  return c.json({ message: 'Offer declined.' })
 })
 
 // POST /api/offers/:id/cancel
@@ -244,10 +184,6 @@ offerRoutes.post('/:id/cancel', requireAuth, async (c) => {
   if (String(offer.buyer) !== String(buyer._id)) return c.json({ error: 'Forbidden: only the buyer can cancel' }, 403)
   if (offer.status !== 'pending') return c.json({ error: `Offer is already ${offer.status}` }, 400)
 
-  if (offer.stripePaymentIntentId) {
-    await stripe.paymentIntents.cancel(offer.stripePaymentIntentId)
-  }
-
   await Offer.findByIdAndUpdate(id, { status: 'cancelled' })
-  return c.json({ message: 'Offer cancelled and payment hold released.' })
+  return c.json({ message: 'Offer cancelled.' })
 })
