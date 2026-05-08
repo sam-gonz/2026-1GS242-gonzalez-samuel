@@ -131,19 +131,19 @@ offerRoutes.post('/:id/accept', requireAuth, async (c) => {
 
   await Offer.findByIdAndUpdate(id, { status: 'accepted' })
 
-  // Crear transaccion — usuarios coordinan pago/envio via chat
   const txType =
     offer.type === 'cards' ? 'c2c_trade'
     : offer.type === 'mixed' ? 'c2c_mixed'
     : 'c2c_money'
 
+  // status 'pending' = transaccion creada, usuarios coordinan via chat
   const transaction = await Transaction.create({
     offer:          offer._id,
     buyer:          offer.buyer,
     seller:         offer.seller,
     type:           txType,
     grossAmount:    offer.moneyAmount,
-    status:         'awaiting_shipment',
+    status:         'pending',
     reviewEligible: false,
   })
 
