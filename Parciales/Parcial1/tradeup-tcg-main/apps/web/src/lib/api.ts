@@ -60,7 +60,9 @@ export function useApi() {
         return authRequest(`/api/listings${qs}`)
       },
       get: (id: string) => authRequest(`/api/listings/${id}`),
-      create: (body: FormData) => authRequest('/api/listings', { method: 'POST', body }),
+      // Ahora acepta un objeto plain (JSON) ya que el backend espera JSON
+      create: (body: object) =>
+        authRequest('/api/listings', { method: 'POST', body: JSON.stringify(body) }),
       delete: (id: string) => authRequest(`/api/listings/${id}`, { method: 'DELETE' }),
     },
     offers: {
@@ -125,6 +127,9 @@ export function useApi() {
     },
     users: {
       profile: (id: string) => authRequest(`/api/users/${id}/profile`),
+      profileSettings: () => authRequest('/api/users/me/profile-settings'),
+      updateProfile: (body: object) =>
+        authRequest('/api/users/me/profile-settings', { method: 'PATCH', body: JSON.stringify(body) }),
     },
   }
 }
