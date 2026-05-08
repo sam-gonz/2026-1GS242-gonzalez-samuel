@@ -60,7 +60,6 @@ export function useApi() {
         return authRequest(`/api/listings${qs}`)
       },
       get: (id: string) => authRequest(`/api/listings/${id}`),
-      // Ahora acepta un objeto plain (JSON) ya que el backend espera JSON
       create: (body: object) =>
         authRequest('/api/listings', { method: 'POST', body: JSON.stringify(body) }),
       delete: (id: string) => authRequest(`/api/listings/${id}`, { method: 'DELETE' }),
@@ -71,6 +70,11 @@ export function useApi() {
       accept: (id: string) => authRequest(`/api/offers/${id}/accept`, { method: 'POST' }),
       decline: (id: string) => authRequest(`/api/offers/${id}/decline`, { method: 'POST' }),
       cancel: (id: string) => authRequest(`/api/offers/${id}/cancel`, { method: 'POST' }),
+    },
+    chat: {
+      messages: (transactionId: string) => authRequest(`/api/chat/${transactionId}`),
+      send: (transactionId: string, text: string) =>
+        authRequest(`/api/chat/${transactionId}`, { method: 'POST', body: JSON.stringify({ text }) }),
     },
     payments: {
       c2cIntent: (body: { listingId: string; amount: number }) =>

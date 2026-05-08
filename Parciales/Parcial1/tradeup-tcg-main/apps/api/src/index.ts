@@ -16,6 +16,7 @@ import { adminRoutes } from './routes/admin.js'
 import { paymentRoutes } from './routes/payments.js'
 import { reviewRoutes } from './routes/reviews.js'
 import { notificationRoutes } from './routes/notifications.js'
+import { chatRoutes } from './routes/chat.js'
 
 const app = new Hono()
 
@@ -33,17 +34,18 @@ app.use('/uploads/*', serveStatic({ root: './' }))
 // Stripe webhook — raw body, before JSON middleware
 app.route('/webhooks', webhookRoutes)
 
-app.route('/api/auth', authRoutes)
-app.route('/api/listings', listingRoutes)
-app.route('/api/offers', offerRoutes)
-app.route('/api/catalog', catalogRoutes)
-app.route('/api/store', storeRoutes)
-app.route('/api/users', userRoutes)
-app.route('/api/transactions', transactionRoutes)
-app.route('/api/admin', adminRoutes)
-app.route('/api/payments', paymentRoutes)
-app.route('/api/reviews', reviewRoutes)
+app.route('/api/auth',          authRoutes)
+app.route('/api/listings',      listingRoutes)
+app.route('/api/offers',        offerRoutes)
+app.route('/api/catalog',       catalogRoutes)
+app.route('/api/store',         storeRoutes)
+app.route('/api/users',         userRoutes)
+app.route('/api/transactions',  transactionRoutes)
+app.route('/api/admin',         adminRoutes)
+app.route('/api/payments',      paymentRoutes)
+app.route('/api/reviews',       reviewRoutes)
 app.route('/api/notifications', notificationRoutes)
+app.route('/api/chat',          chatRoutes)
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 
