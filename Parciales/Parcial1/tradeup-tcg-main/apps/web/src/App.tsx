@@ -13,6 +13,7 @@ import { OrderDetailPage } from './pages/OrderDetailPage'
 import { AdminPage } from './pages/AdminPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { ProfileSettingsPage } from './pages/ProfileSettingsPage'
+import { ChatPage } from './pages/ChatPage'
 import { useAuthSync } from './hooks/useAuthSync'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -54,6 +55,10 @@ function AppRoutes() {
           element={<ProtectedRoute><OrderDetailPage /></ProtectedRoute>}
         />
         <Route
+          path="/chat/:transactionId"
+          element={<ProtectedRoute><ChatPage /></ProtectedRoute>}
+        />
+        <Route
           path="/listings/new"
           element={<ProtectedRoute><CreateListingPage /></ProtectedRoute>}
         />
@@ -61,7 +66,6 @@ function AppRoutes() {
           path="/admin"
           element={<ProtectedRoute><AdminPage /></ProtectedRoute>}
         />
-        {/* 404 — ya no redirige a /, muestra página dedicada */}
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
