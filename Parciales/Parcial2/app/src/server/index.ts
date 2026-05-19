@@ -4,6 +4,7 @@ import { cors } from 'hono/cors'
 import { connectDB } from './db'
 import pokemon from './routes/pokemon'
 import rooms from './routes/rooms'
+import battle from './routes/battle'
 
 const app = new Hono()
 
@@ -16,6 +17,7 @@ app.get('/', (c) => {
 
 app.route('/api/pokemon', pokemon)
 app.route('/api/rooms', rooms)
+app.route('/api/battle', battle)
 
 connectDB().then(() => {
   console.log('✅ MongoDB connected')
