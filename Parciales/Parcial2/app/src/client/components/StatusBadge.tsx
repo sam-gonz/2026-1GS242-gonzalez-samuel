@@ -1,9 +1,9 @@
-const ICONS: Record<string, string> = {
-  burn:      '🔥',
-  poison:    '☠️',
-  paralysis: '⚡',
-  sleep:     '💤',
-  freeze:    '❄️',
+const LABELS: Record<string, string> = {
+  burn:      'BRN',
+  poison:    'PSN',
+  paralysis: 'PAR',
+  sleep:     'SLP',
+  freeze:    'FRZ',
 }
 
 interface Props {
@@ -14,7 +14,7 @@ export default function StatusBadge({ status }: Props) {
   if (!status) return null
   return (
     <span className={`status-badge status-${status.name}`}>
-      {ICONS[status.name] ?? ''} {status.name.toUpperCase()} ({status.remainingTurns}T)
+      {LABELS[status.name] ?? status.name.toUpperCase()} ({status.remainingTurns}T)
     </span>
   )
 }

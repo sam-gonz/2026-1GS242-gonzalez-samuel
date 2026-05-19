@@ -27,7 +27,7 @@ export default function Home() {
 
   async function handleJoin() {
     if (!name.trim()) return setError('Ingresa tu nombre')
-    if (!code.trim()) return setError('Ingresa el código de sala')
+    if (!code.trim()) return setError('Ingresa el codigo de sala')
     setLoading(true); setError('')
     try {
       const res  = await fetch(`${API}/rooms/${code.trim().toUpperCase()}/join`, {
@@ -44,16 +44,14 @@ export default function Home() {
 
   return (
     <div className="page anim-fade-in">
-      {/* Logo / Title */}
       <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
         <h1 className="anim-glow" style={{ fontSize: 'clamp(12px, 2vw, 18px)', marginBottom: '0.5rem' }}>
-          ⚔️ POKÉMON BATTLE ROOMS
+          POKEMON BATTLE ROOMS
         </h1>
         <p style={{ fontSize: '11px' }}>Selecciona tu equipo. Elige tus movimientos. Gana la batalla.</p>
       </div>
 
       <div className="card">
-        {/* Tabs */}
         <div style={{ display: 'flex', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)' }}>
           {(['create', 'join'] as const).map((t) => (
             <button
@@ -72,12 +70,11 @@ export default function Home() {
                 letterSpacing: '0.06em',
               }}
             >
-              {t === 'create' ? '+ CREAR SALA' : '▶ UNIRSE'}
+              {t === 'create' ? 'CREAR SALA' : 'UNIRSE'}
             </button>
           ))}
         </div>
 
-        {/* Name input */}
         <div style={{ marginBottom: '1rem' }}>
           <label style={{ fontFamily: 'var(--font-display)', fontSize: '8px', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>
             TU NOMBRE
@@ -92,11 +89,10 @@ export default function Home() {
           />
         </div>
 
-        {/* Code input (solo en join) */}
         {tab === 'join' && (
           <div style={{ marginBottom: '1rem' }}>
             <label style={{ fontFamily: 'var(--font-display)', fontSize: '8px', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>
-              CÓDIGO DE SALA
+              CODIGO DE SALA
             </label>
             <input
               type="text"
@@ -110,21 +106,19 @@ export default function Home() {
           </div>
         )}
 
-        {/* Error */}
         {error && (
           <p style={{ color: 'var(--red)', fontSize: '11px', marginBottom: '1rem' }}>
-            ⚠ {error}
+            ERROR: {error}
           </p>
         )}
 
-        {/* Action button */}
         <button
           className="btn btn--primary"
           style={{ width: '100%', justifyContent: 'center' }}
           onClick={tab === 'create' ? handleCreate : handleJoin}
           disabled={loading}
         >
-          {loading ? '...' : tab === 'create' ? '⚔ CREAR SALA' : '▶ UNIRSE A SALA'}
+          {loading ? 'CARGANDO...' : tab === 'create' ? 'CREAR SALA' : 'UNIRSE A SALA'}
         </button>
       </div>
     </div>

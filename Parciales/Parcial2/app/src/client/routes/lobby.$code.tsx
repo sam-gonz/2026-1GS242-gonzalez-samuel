@@ -14,13 +14,11 @@ export default function Lobby() {
   const [players, setPlayers] = useState<{ name: string; ready: boolean }[]>([])
   const [dots, setDots]       = useState('.')
 
-  // Animación de puntos
   useEffect(() => {
     const id = setInterval(() => setDots((d) => (d.length >= 3 ? '.' : d + '.')), 500)
     return () => clearInterval(id)
   }, [])
 
-  // Polling cada 2s para saber si el segundo jugador llegó
   useEffect(() => {
     const poll = async () => {
       try {
@@ -42,10 +40,9 @@ export default function Lobby() {
     <div className="page anim-fade-in">
       <div className="card" style={{ textAlign: 'center' }}>
         <p style={{ fontFamily: 'var(--font-display)', fontSize: '8px', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-          CÓDIGO DE SALA
+          CODIGO DE SALA
         </p>
 
-        {/* Código gigante con glow */}
         <h1
           className="anim-glow"
           style={{
@@ -60,7 +57,6 @@ export default function Lobby() {
 
         <hr className="divider" />
 
-        {/* Estado de jugadores */}
         <div style={{ marginBottom: '1.5rem' }}>
           {players.map((p, i) => (
             <div
@@ -74,7 +70,7 @@ export default function Lobby() {
                 animationDelay: `${i * 0.1}s`,
               }}
             >
-              <span style={{ color: 'var(--green)', fontSize: '12px' }}>●</span>
+              <span style={{ color: 'var(--green)', fontSize: '10px', fontFamily: 'var(--font-display)' }}>ON</span>
               <span style={{ fontFamily: 'var(--font-body)', color: 'var(--text)' }}>{p.name}</span>
               <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-display)', fontSize: '7px', color: 'var(--text-muted)' }}>
                 LISTO
@@ -84,14 +80,14 @@ export default function Lobby() {
 
           {players.length < 2 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0' }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>○</span>
+              <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-display)', fontSize: '10px' }}>--</span>
               <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Esperando oponente{dots}</span>
             </div>
           )}
         </div>
 
         <p style={{ fontSize: '11px' }}>
-          Comparte el código con tu oponente para comenzar.
+          Comparte el codigo con tu oponente para comenzar.
         </p>
       </div>
     </div>

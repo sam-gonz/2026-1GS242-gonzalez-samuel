@@ -8,10 +8,10 @@ interface LogEntry {
 function entryClass(msg: string) {
   if (msg.includes('super efectivo'))  return 'log-entry log-entry--super'
   if (msg.includes('No tiene efecto')) return 'log-entry log-entry--immune'
-  if (msg.includes('crítico'))         return 'log-entry log-entry--critical'
+  if (msg.includes('critico'))         return 'log-entry log-entry--critical'
   if (msg.includes('debilit'))         return 'log-entry log-entry--faint'
   if (msg.includes('switch') || msg.includes('cambi')) return 'log-entry log-entry--switch'
-  if (msg.includes('ganó'))            return 'log-entry log-entry--win'
+  if (msg.includes('gano'))            return 'log-entry log-entry--win'
   return 'log-entry'
 }
 
@@ -29,7 +29,7 @@ export default function BattleLog({ entries }: Props) {
   return (
     <div className="battle-log" ref={ref}>
       {entries.length === 0 && (
-        <p className="log-entry">¡La batalla comienza! Elige tu acción.</p>
+        <p className="log-entry">La batalla comienza. Elige tu accion.</p>
       )}
       {entries.slice(-30).map((e, i) => (
         <div key={i} className={entryClass(e.message)}>

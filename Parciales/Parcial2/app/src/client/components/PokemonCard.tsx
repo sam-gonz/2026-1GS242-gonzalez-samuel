@@ -25,7 +25,7 @@ export default function PokemonCard({ pokemon, isOpponent = false, isActive = fa
   return (
     <div className={`pokemon-slot ${isActive ? 'pokemon-slot--active' : ''} ${isFainted ? 'pokemon-slot--fainted' : ''}`}>
       <span style={{ fontFamily: 'var(--font-display)', fontSize: '7px', color: isActive ? 'var(--accent)' : 'var(--text-muted)', alignSelf: 'flex-start' }}>
-        {isOpponent ? 'OPONENTE' : 'TU POKÉMON'}
+        {isOpponent ? 'OPPONENT' : 'YOUR POKEMON'}
       </span>
 
       <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
