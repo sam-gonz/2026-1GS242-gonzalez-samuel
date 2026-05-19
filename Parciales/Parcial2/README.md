@@ -24,115 +24,180 @@ Aplicación web full-stack de batallas Pokémon **1P vs 1P** mediante salas con 
 
 ---
 
-## 🏗️ Plan de Desarrollo
+## 🏗️ Plan de Desarrollo por Fases
 
-### Día 1 — Setup e Importación de Datos
+### Fase 1 — Fundaciones del Proyecto
 
-**Objetivo:** Proyecto corriendo con Docker, Bun + Hono + MongoDB conectados, y 300+ Pokémon importados.
+**Objetivo:** dejar la base técnica lista para construir sin retrabajo posterior.
 
-- [ ] Inicializar proyecto con `bun init`, instalar Hono, mongoose/mongodb driver
-- [ ] Crear `docker-compose.yml` con servicios: `app` y `mongodb`
-- [ ] Conectar Hono a MongoDB
-- [ ] Crear modelos: `Pokemon`, `Move`, `TypeChart`
-- [ ] Crear script de seed que consuma PokéAPI:
-  - `GET https://pokeapi.co/api/v2/pokemon?limit=300&offset=0`
-  - Para cada Pokémon: guardar `id`, `name`, `types`, `baseStats`, `spriteUrl`, `moveIds[]`
-  - Para cada movimiento relevante: `name`, `type`, `power`, `accuracy`, `priority`, `damageClass`, `effect`
-  - Relaciones de daño entre tipos desde `GET /api/v2/type/{id}`
-- [ ] Documentar seed en README (cómo correrlo)
-- [ ] Endpoint `GET /api/pokemon` funcional con datos desde MongoDB
+- [ ] Inicializar el proyecto con Bun
+- [ ] Configurar TanStack Start para frontend
+- [ ] Configurar Hono para backend/API
+- [ ] Crear `docker-compose.yml` con `app` y `mongodb`
+- [ ] Conectar la aplicación a MongoDB
+- [ ] Definir variables de entorno y estructura inicial del proyecto
+- [ ] Crear las carpetas base para `server`, `client`, `models`, `routes`, `engine` y `seed`
 
 ---
 
-### Día 2 — Sistema de Salas y Modelos de Batalla
+### Fase 2 — Ingesta y Persistencia de Datos
 
-**Objetivo:** Crear sala → generar código → segundo jugador se une → lobby funcional.
+**Objetivo:** tener la base de datos poblada con información real desde PokéAPI, sin hardcodear data.
 
-- [ ] Modelo `Room`: `{ code, status: 'waiting'|'selecting'|'battle'|'ended', players: [], createdAt }`
-- [ ] Modelo `Battle`: `{ roomCode, turn, status, players: [{ name, team, activePokemonId, selectedAction }], battleLog, winnerPlayerId }`
-- [ ] Endpoints backend:
-  - `POST /api/rooms` → crea sala, genera código único (nanoid 6 chars)
-  - `POST /api/rooms/:code/join` → segundo jugador se une
-  - `GET /api/rooms/:code` → estado actual (polling / SSE)
-- [ ] Lógica de validación de sala (no más de 2 jugadores, sala no repetida)
+- [ ] Crear modelo `Pokemon`
+- [ ] Crear modelo `Move`
+- [ ] Crear modelo `TypeChart`
+- [ ] Consumir `GET https://pokeapi.co/api/v2/pokemon?limit=300&offset=0`
+- [ ] Importar al menos 300 Pokémon en MongoDB
+- [ ] Guardar por cada Pokémon: `id`, `name`, `types`, `baseStats`, `spriteUrl`, `moveIds[]`
+- [ ] Guardar movimientos con `name`, `type`, `power`, `accuracy`, `priority`, `damageClass`, `effect`
+- [ ] Guardar relaciones de daño por tipo desde PokéAPI
+- [ ] Documentar el proceso de seed en el README
+- [ ] Crear endpoint `GET /api/pokemon` para consumir catálogo desde MongoDB
 
 ---
 
-### Día 3 — Selección de Equipo y Motor de Batalla (Core)
+### Fase 3 — Sistema de Salas y Flujo Pre-Batalla
 
-**Objetivo:** Seleccionar equipo de hasta 6 Pokémon y ejecutar turnos con daño real.
+**Objetivo:** permitir que dos jugadores creen o se unan a una sala y preparen la partida.
 
-- [ ] Endpoint `POST /api/rooms/:code/team` → guardar equipo del jugador (hasta 6 Pokémon con exactamente 4 movimientos c/u)
-- [ ] Generar IVs aleatorios al iniciar partida (guardados en estado de batalla, no recalculados)
-- [ ] Calcular stats de batalla nivel 50:
-  ```
-  hp  = floor((2 * baseHp  + ivHp)  * 50 / 100) + 50 + 10
-  stat = floor((2 * baseStat + ivStat) * 50 / 100) + 5
-  ```
-- [ ] Endpoint `POST /api/rooms/:code/action` → recibe acción del jugador (`{ type: 'move'|'switch', moveId/pokemonId }`)
-- [ ] Motor de turno (se resuelve cuando ambos jugadores enviaron acción):
-  1. Validar acciones (jugador en sala, Pokémon vivo, movimiento del Pokémon)
-  2. Ordenar por prioridad de movimiento → velocidad efectiva → coin flip
-  3. Calcular daño con la fórmula completa
-  4. Aplicar estados temporales (3 turnos, se eliminan al cambiar)
-  5. Actualizar HP, detectar debilitados
-  6. Detectar victoria (todos los Pokémon de un jugador con HP ≤ 0)
-  7. Guardar en `battleLog`
+- [ ] Crear modelo `Room`
+- [ ] Generar código único de sala
+- [ ] Implementar `POST /api/rooms` para crear sala
+- [ ] Implementar `POST /api/rooms/:code/join` para unirse a sala
+- [ ] Implementar `GET /api/rooms/:code` para consultar estado de la sala
+- [ ] Validar que no entren más de dos jugadores
+- [ ] Crear lobby de espera mientras llega el jugador 2
+- [ ] Permitir que ambos jugadores registren nombre temporal
+- [ ] Preparar flujo de selección o asignación de equipo
 
-#### Fórmula de Daño
+---
+
+### Fase 4 — Equipos y Estado Inicial de Batalla
+
+**Objetivo:** dejar la partida lista para comenzar con reglas válidas desde el inicio.
+
+- [ ] Crear modelo `Battle`
+- [ ] Implementar `POST /api/rooms/:code/team`
+- [ ] Permitir equipos de hasta 6 Pokémon por jugador
+- [ ] Validar que cada Pokémon tenga exactamente 4 movimientos válidos y no repetidos
+- [ ] Excluir o documentar los casos donde un Pokémon no tenga 4 movimientos válidos
+- [ ] Generar IVs aleatorios al iniciar la partida
+- [ ] Calcular stats de batalla a nivel 50
+- [ ] Definir Pokémon activo inicial por jugador
+- [ ] Guardar HP actual, estados, modificadores y equipo en el estado de batalla
+
+#### Fórmulas de stats sugeridas
+```
+hp   = floor((2 * baseHp + ivHp) * 50 / 100) + 50 + 10
+stat = floor((2 * baseStat + ivStat) * 50 / 100) + 5
+```
+
+---
+
+### Fase 5 — Motor de Combate
+
+**Objetivo:** resolver turnos completos desde el backend de forma consistente y verificable.
+
+- [ ] Implementar `POST /api/rooms/:code/action`
+- [ ] Recibir acciones tipo `move` o `switch`
+- [ ] Validar que el jugador pertenece a la sala
+- [ ] Validar que el Pokémon activo esté vivo
+- [ ] Validar que el movimiento pertenece al Pokémon activo
+- [ ] Evitar acciones duplicadas en el mismo turno
+- [ ] Resolver el turno solo cuando ambos jugadores hayan enviado su acción
+- [ ] Ordenar acciones por prioridad, velocidad efectiva y coin flip si es necesario
+- [ ] Calcular precisión, daño, STAB, efectividad, crítico y quemadura
+- [ ] Aplicar cambios de Pokémon
+- [ ] Detectar debilitamiento y victoria
+- [ ] Guardar cada evento en `battleLog`
+
+#### Fórmula de daño
 ```
 baseDamage = floor(floor(floor(2 * 50 / 5 + 2) * movePower * (attackStat / defenseStat)) / 50 + 2)
 modifier    = randomFactor * stab * typeMultiplier * critical * burnModifier
 finalDamage = max(1, floor(baseDamage * modifier))
 
-randomFactor  = randomInt(85, 100) / 100
-STAB          = 1.5 si tipo movimiento ∈ tipos del atacante, sino 1
-typeMultiplier = Producto de multiplicadores x2 / x0.5 / x0 / x1 por cada tipo del defensor
-critical      = 1.5 si random < 1/24, sino 1
-burnModifier  = 0.5 si atacante quemado + movimiento físico, sino 1
+randomFactor   = randomInt(85, 100) / 100
+stab           = 1.5 si el tipo del movimiento coincide con el atacante, si no 1
+typeMultiplier = producto de x2, x0.5, x0 o x1 según los tipos del defensor
+critical       = 1.5 si random < 1/24, si no 1
+burnModifier   = 0.5 si está quemado y usa movimiento físico, si no 1
 ```
 
 ---
 
-### Día 4 — Frontend: Interfaz Visual (con SKILL.md)
+### Fase 6 — Estados, Reglas y Log de Batalla
 
-**Objetivo:** UI completa con aesthetic retro-pixel/game-card aplicando las directrices del SKILL.md.
+**Objetivo:** completar las mecánicas obligatorias que hacen la pelea jugable y evaluable.
 
-#### Dirección Estética: "Retro Game Card — Dark Arena"
-- **Tono:** Maximalist retro-futurista, oscuro, intenso. Como si una Pokédex de los 90s se fusionara con un fighting game arcade.
-- **Colores:** Fondo `#0a0a0f` (casi negro), acentos `#FFD700` (amarillo Pokémon), `#EF4444` (rojo daño), `#22C55E` (verde vida). CSS variables obligatorias.
-- **Tipografía:** Display: `"Press Start 2P"` (Google Fonts, 8-bit) para títulos y UI crítica. Body: `"IBM Plex Mono"` para logs y stats — evitar Inter/Roboto/Arial completamente.
-- **Fondos:** Gradient mesh oscuro con noise texture sutil. Grid pattern de píxeles en fondo de pantalla de batalla.
-- **Animaciones:** CSS keyframes para shake de daño, pulse en barra de vida crítica (<20%), slide-in de log entries, bounce en Pokémon al atacar.
-- **Layout:** Grid asimétrico en pantalla de batalla. Pokémon del oponente arriba-derecha, propio abajo-izquierda. Botones de movimientos en panel inferior con color por tipo.
-
-#### Pantallas a Implementar:
-- [ ] **Home** — Crear sala / Unirse con código (input grande, estilo terminal)
-- [ ] **Lobby** — Esperando jugador 2, muestra código gigante con efecto glow, animación de dots "esperando..."
-- [ ] **Team Select** — Grid de Pokémon con sprites, filtro por tipo/nombre, selección máx 6 con indicadores visuales
-- [ ] **Battle Screen:**
-  - Sprites de ambos Pokémon activos (consistentes: solo sprites 2D oficiales)
-  - Barras de vida animadas con CSS transitions
-  - Tipos del Pokémon como badges con color por tipo
-  - 4 botones de movimiento con color del tipo del movimiento
-  - Panel de cambio de Pokémon (bench visible)
-  - Log de batalla scrolleable con entradas coloreadas (súper efectivo = naranja, no tuvo efecto = gris)
-  - Indicador de estado (quemado 🔥, paralizado ⚡, envenenado ☠️)
-- [ ] **Victory/Defeat Screen** — Pantalla final con animación
+- [ ] Implementar estados temporales de 3 turnos
+- [ ] Mostrar en log cuándo un ataque fue súper efectivo, poco efectivo o no tuvo efecto
+- [ ] Reducir velocidad por parálisis si se implementa
+- [ ] Aplicar daño pasivo por quemadura o veneno
+- [ ] Eliminar estado y modificadores al cambiar o retirar Pokémon
+- [ ] Registrar claramente turnos, efectos, cambios y KO en el log
 
 ---
 
-### Día 5 — Animaciones, Integración Final y Docker
+### Fase 7 — Frontend y Diseño Visual
 
-**Objetivo:** Sistema completamente integrado, Docker funcional, demo lista.
+**Objetivo:** construir una interfaz clara, memorable y coherente con el proyecto, usando el enfoque del `SKILL.md` para todo el diseño frontend.
 
-- [ ] Animaciones de batalla: CSS shake al recibir daño, fade-out al debilitarse, slide al cambiar Pokémon
-- [ ] Polling o SSE cada 1-2s para actualizar estado de batalla desde el backend
-- [ ] Manejo de error: sala no encontrada, equipo inválido, acción repetida
-- [ ] `docker-compose.yml` final con variables de entorno
-- [ ] README final con instrucciones de instalación y run
-- [ ] Prueba end-to-end: dos navegadores, crear sala, batallar hasta victoria
-- [ ] Opcional: implementar prioridad de movimiento + velocidad (bonus)
+#### Dirección estética definida con SKILL.md
+**Concepto:** `Retro Game Card — Dark Arena`
+
+- **Tono:** retro-futurista oscuro, estilo arcade táctico con energía de batalla
+- **Identidad visual:** mezcla entre Pokédex clásica, HUD de combate y tarjeta coleccionable digital
+- **Tipografía:** `Press Start 2P` para títulos y elementos clave, `IBM Plex Mono` para logs, stats y texto funcional
+- **Colores:** `#0a0a0f` como base, `#FFD700` para acentos principales, `#EF4444` para daño, `#22C55E` para vida
+- **Fondos:** mesh oscuro, textura sutil, patrones pixel-grid y brillos controlados
+- **Movimiento:** animaciones puntuales de alto impacto, sin llenar la interfaz de efectos innecesarios
+- **Regla visual clave:** usar solo sprites 2D consistentes; no mezclar estilos incompatibles
+
+#### Pantallas a implementar
+- [ ] Pantalla de inicio para crear sala o unirse con código
+- [ ] Lobby de espera con código visible y estado del segundo jugador
+- [ ] Pantalla de selección de equipo con grid, filtros y feedback visual
+- [ ] Pantalla de batalla con sprites, barras de vida, tipos, estados y 4 movimientos
+- [ ] Panel de cambio de Pokémon
+- [ ] Log de batalla visible y scrolleable
+- [ ] Pantalla final de victoria o derrota
+
+#### Componentes visuales clave
+- [ ] `PokemonCard`
+- [ ] `HealthBar`
+- [ ] `MoveButton`
+- [ ] `TypeBadge`
+- [ ] `StatusBadge`
+- [ ] `BattleLog`
+
+---
+
+### Fase 8 — Sincronización, Integración y Demo
+
+**Objetivo:** dejar el sistema funcional de punta a punta para pruebas y presentación.
+
+- [ ] Actualizar estado de batalla con polling, refetch, SSE o WebSockets
+- [ ] Manejar errores de sala inválida, acciones repetidas o equipo incorrecto
+- [ ] Verificar que dos navegadores puedan completar una partida completa
+- [ ] Confirmar que la partida puede terminar con victoria o derrota
+- [ ] Validar que Docker levante correctamente el proyecto completo
+- [ ] Completar README final con instrucciones, reglas implementadas, seed y limitaciones conocidas
+
+---
+
+### Fase 9 — Mejores Opcionales
+
+**Objetivo:** agregar mejoras si ya todo lo obligatorio está sólido.
+
+- [ ] Orden de turnos por prioridad + velocidad efectiva
+- [ ] Filtros por nombre o tipo en selección
+- [ ] Reconexión de sala al refrescar
+- [ ] Historial o replay simple
+- [ ] Temporizador por turno
+- [ ] Sistema de clima o campo
+- [ ] Baneo de Pokémon antes de iniciar
 
 ---
 
@@ -143,9 +208,9 @@ Parcial2/
 ├── docker-compose.yml
 ├── README.md
 ├── app/
-│   ├── package.json (bun)
+│   ├── package.json
 │   ├── src/
-│   │   ├── server/         # Hono backend
+│   │   ├── server/
 │   │   │   ├── index.ts
 │   │   │   ├── routes/
 │   │   │   │   ├── pokemon.ts
@@ -157,14 +222,14 @@ Parcial2/
 │   │   │   │   ├── room.model.ts
 │   │   │   │   └── battle.model.ts
 │   │   │   ├── engine/
-│   │   │   │   ├── damage.ts      # Fórmulas de daño
-│   │   │   │   ├── status.ts      # Estados temporales
-│   │   │   │   └── turn.ts        # Resolver turno completo
+│   │   │   │   ├── damage.ts
+│   │   │   │   ├── status.ts
+│   │   │   │   └── turn.ts
 │   │   │   └── seed/
 │   │   │       └── importPokemon.ts
-│   │   └── client/         # TanStack Start frontend
+│   │   └── client/
 │   │       ├── routes/
-│   │       │   ├── index.tsx       # Home
+│   │       │   ├── index.tsx
 │   │       │   ├── lobby.$code.tsx
 │   │       │   ├── select.$code.tsx
 │   │       │   └── battle.$code.tsx
@@ -176,8 +241,8 @@ Parcial2/
 │   │       │   ├── StatusBadge.tsx
 │   │       │   └── TypeBadge.tsx
 │   │       └── styles/
-│   │           ├── globals.css     # CSS variables, tokens
-│   │           └── battle.css      # Animaciones de batalla
+│   │           ├── globals.css
+│   │           └── battle.css
 ```
 
 ---
@@ -189,13 +254,17 @@ Parcial2/
 {
   pokedexId: number,
   name: string,
-  types: string[],           // ["fire", "flying"]
+  types: string[],
   baseStats: {
-    hp: number, attack: number, defense: number,
-    specialAttack: number, specialDefense: number, speed: number
+    hp: number,
+    attack: number,
+    defense: number,
+    specialAttack: number,
+    specialDefense: number,
+    speed: number
   },
-  spriteUrl: string,         // sprite oficial 2D desde PokéAPI
-  moveIds: string[]          // IDs de movimientos disponibles en PokéAPI
+  spriteUrl: string,
+  moveIds: string[]
 }
 ```
 
@@ -208,14 +277,14 @@ Parcial2/
   accuracy: number | null,
   priority: number,
   damageClass: "physical" | "special" | "status",
-  effect: string | null      // veneno, parálisis, quemadura, etc.
+  effect: string | null
 }
 ```
 
 ### Room
 ```ts
 {
-  code: string,              // nanoid 6 chars
+  code: string,
   status: "waiting" | "selecting" | "battle" | "ended",
   players: [{ name: string, ready: boolean }],
   createdAt: Date
@@ -230,7 +299,7 @@ Parcial2/
   status: "selecting" | "active" | "ended",
   players: [{
     name: string,
-    team: BattlePokemon[],   // con IVs generados, HP actual, modificadores
+    team: BattlePokemon[],
     activePokemonId: string,
     selectedAction: Action | null
   }],
@@ -244,16 +313,9 @@ Parcial2/
 ## 🚀 Instrucciones para Correr el Proyecto
 
 ```bash
-# 1. Clonar y entrar a la carpeta
 cd Parciales/Parcial2
-
-# 2. Levantar con Docker Compose
 docker-compose up --build
-
-# 3. Correr el seed de PokéAPI (primera vez)
 docker exec -it pokemon-app bun run src/server/seed/importPokemon.ts
-
-# 4. Abrir en navegador
 http://localhost:3000
 ```
 
