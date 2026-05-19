@@ -2,11 +2,7 @@ import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import { cors } from 'hono/cors'
 import { connectDB } from './db'
-
-// Routes (se agregan en fases posteriores)
-// import pokemonRoutes from './routes/pokemon'
-// import roomRoutes from './routes/rooms'
-// import battleRoutes from './routes/battle'
+import pokemon from './routes/pokemon'
 
 const app = new Hono()
 
@@ -18,6 +14,9 @@ app.use('*', cors())
 app.get('/', (c) => {
   return c.json({ status: 'ok', message: 'Pokémon Battle Rooms API running 🎮' })
 })
+
+// Rutas
+app.route('/api/pokemon', pokemon)
 
 // Conectar a MongoDB y levantar servidor
 connectDB().then(() => {
