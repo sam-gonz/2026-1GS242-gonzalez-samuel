@@ -3,22 +3,20 @@ import { logger } from 'hono/logger'
 import { cors } from 'hono/cors'
 import { connectDB } from './db'
 import pokemon from './routes/pokemon'
+import rooms from './routes/rooms'
 
 const app = new Hono()
 
-// Middleware
 app.use('*', logger())
 app.use('*', cors())
 
-// Health check
 app.get('/', (c) => {
   return c.json({ status: 'ok', message: 'Pokémon Battle Rooms API running 🎮' })
 })
 
-// Rutas
 app.route('/api/pokemon', pokemon)
+app.route('/api/rooms', rooms)
 
-// Conectar a MongoDB y levantar servidor
 connectDB().then(() => {
   console.log('✅ MongoDB connected')
   console.log(`🚀 Server running on port ${process.env.PORT ?? 3000}`)
