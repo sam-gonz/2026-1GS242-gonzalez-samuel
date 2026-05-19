@@ -5,6 +5,8 @@ COPY package.json ./
 RUN npm install
 COPY . .
 RUN npm run build
+RUN ls -la /app/dist || echo "dist not found"
+RUN ls -la /app/dist/client || echo "dist/client not found"
 
 # --- Stage 2: runtime with Bun ---
 FROM oven/bun:1 AS runtime
@@ -12,6 +14,7 @@ WORKDIR /app
 COPY package.json ./
 RUN bun install --production
 COPY src ./src
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/dist/client ./dist/client
+RUN ls -la /app/dist/client || echo "dist/client missing in runtime"
 EXPOSE 3000
 CMD ["bun", "run", "src/server/index.ts"]
