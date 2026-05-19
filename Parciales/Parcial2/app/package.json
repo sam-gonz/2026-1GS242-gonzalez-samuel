@@ -1,0 +1,19 @@
+{
+  "name": "pokemon-battle-rooms",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "bun run --watch src/server/index.ts",
+    "start": "bun run src/server/index.ts",
+    "seed": "bun run src/server/seed/importPokemon.ts"
+  },
+  "dependencies": {
+    "hono": "^4.4.0",
+    "mongoose": "^8.4.0",
+    "nanoid": "^5.0.7",
+    "@tanstack/start": "latest"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.4.5"
+  }
+}

@@ -1,0 +1,33 @@
+version: '3.9'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: pokemon-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: pokemon_battle
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+
+  app:
+    container_name: pokemon-app
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017/pokemon_battle
+      - PORT=3000
+    depends_on:
+      - mongodb
+    volumes:
+      - ./app:/app
+      - /app/node_modules
+
+volumes:
+  mongo_data:
