@@ -17,11 +17,15 @@ app.route('/api/pokemon', pokemon)
 app.route('/api/rooms', rooms)
 app.route('/api/battle', battle)
 
-// Serve frontend static files
-app.use('/*', serveStatic({ root: './dist/client' }))
+// Serve static assets (JS, CSS, images)
+app.use('/*', serveStatic({ root: '/app/dist/client' }))
 
-// SPA fallback — all unknown routes serve index.html
-app.get('/*', serveStatic({ path: './dist/client/index.html' }))
+// SPA fallback — serve index.html for all non-API routes
+app.get('/*', async (c) => {
+  const file = Bun.file('/app/dist/client/index.html')
+  const html = await file.text()
+  return c.html(html)
+})
 
 connectDB().then(() => {
   console.log('MongoDB connected')

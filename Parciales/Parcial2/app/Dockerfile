@@ -11,7 +11,7 @@ FROM oven/bun:1 AS runtime
 WORKDIR /app
 COPY package.json ./
 RUN bun install --production
-COPY --from=builder /app/dist/client ./dist/client
 COPY src ./src
+COPY --from=builder /app/dist ./dist
 EXPOSE 3000
 CMD ["bun", "run", "src/server/index.ts"]
