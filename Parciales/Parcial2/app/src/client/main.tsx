@@ -15,7 +15,12 @@ const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ClerkProvider publishableKey={clerkPubKey}>
+    <ClerkProvider
+      publishableKey={clerkPubKey}
+      singleSession={true}
+      afterSignInUrl="/"
+      afterSignUpUrl="/"
+    >
       <BrowserRouter>
         <Routes>
           <Route path="/"              element={<Home />} />

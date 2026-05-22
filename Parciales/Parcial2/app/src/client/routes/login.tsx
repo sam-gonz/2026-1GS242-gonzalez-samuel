@@ -165,7 +165,7 @@ export default function Login() {
         await signUp.create({
           emailAddress: email,
           password,
-          publicMetadata: { name },
+          unsafeMetadata: { name },
         })
         await signUp.prepareEmailAddressVerification({ strategy: 'email_code' })
         setVerifying(true)
@@ -176,13 +176,13 @@ export default function Login() {
         })
         if (result.status === 'complete') {
           await setActive({ session: result.createdSessionId })
-          const clerkId = result.createdSessionId
+          const userId = result.userId
           await fetch('/api/users', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              clerkId: result.createdSessionId,
-              name: email.split('@')[0],
+              clerkId: userId,
+              name: name || email.split('@')[0],
               email,
             }),
           })
@@ -206,11 +206,12 @@ export default function Login() {
       const result = await signUp.attemptEmailAddressVerification({ code })
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId })
+        const userId = result.createdUserId
         await fetch('/api/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            clerkId: result.createdSessionId,
+            clerkId: userId,
             name,
             email,
           }),

@@ -62,9 +62,15 @@ export default function Shop() {
     async function fetchData() {
       setLoading(true)
       try {
+        const userId = user?.id
+        if (!userId) {
+          setLoading(false)
+          return
+        }
+
         const [pokemonRes, userRes] = await Promise.all([
           fetch('/api/shiny?limit=150'),
-          fetch(`/api/payments/user-shinies/${user.id}`),
+          fetch(`/api/payments/user-shinies/${userId}`),
         ])
 
         const pokemonData = await pokemonRes.json()
@@ -81,7 +87,7 @@ export default function Shop() {
     }
 
     fetchData()
-  }, [user, isLoaded, isSignedIn, navigate])
+  }, [isLoaded, isSignedIn, navigate])
 
   async function handleBuy(pokedexId: number) {
     if (!user) return
@@ -166,19 +172,35 @@ export default function Shop() {
           flexWrap: 'wrap',
           gap: '1rem',
         }}>
-          <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <button
+              onClick={() => navigate(-1)}
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '8px',
+                color: 'var(--text-muted)',
+                background: 'none',
+                border: '1px solid var(--border)',
+                borderRadius: '4px',
+                padding: '0.5rem 0.75rem',
+                cursor: 'pointer',
+                letterSpacing: '0.06em',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+              }}
+            >
+              ← VOLVER
+            </button>
             <h1 style={{
               fontFamily: 'var(--font-display)',
               fontSize: 'clamp(12px, 2vw, 18px)',
               color: 'var(--accent)',
-              marginBottom: '0.5rem',
+              marginBottom: '0',
               textShadow: '0 0 20px rgba(255,215,0,0.4)',
             }}>
               TIENDA SHINY
             </h1>
-            <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-muted)' }}>
-              Colección: {ownedCount} / {totalShiny} shinies desbloqueados
-            </p>
           </div>
 
           <div style={{ display: 'flex', gap: '0.5rem' }}>
