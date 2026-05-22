@@ -4,8 +4,11 @@ import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/bun'
 import { connectDB } from './db'
 import pokemon from './routes/pokemon'
+import shiny from './routes/shiny'
 import rooms from './routes/rooms'
 import battle from './routes/battle'
+import payments from './routes/payments'
+import users from './routes/users'
 
 const app = new Hono()
 
@@ -14,8 +17,11 @@ app.use('*', cors())
 
 // API routes
 app.route('/api/pokemon', pokemon)
+app.route('/api/shiny', shiny)
 app.route('/api/rooms', rooms)
 app.route('/api/battle', battle)
+app.route('/api/payments', payments)
+app.route('/api/users', users)
 
 // Serve static assets (JS, CSS, images)
 app.use('/*', serveStatic({ root: '/app/dist/client' }))

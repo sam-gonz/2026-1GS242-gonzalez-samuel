@@ -1,8 +1,11 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useUser } from '@clerk/clerk-react'
 
 const API = '/api'
 
 export default function Home() {
+  const { user, isSignedIn } = useUser()
   const [tab, setTab]         = useState<'create' | 'join'>('create')
   const [name, setName]       = useState('')
   const [code, setCode]       = useState('')
@@ -50,6 +53,23 @@ export default function Home() {
         </h1>
         <p style={{ fontSize: '11px' }}>Selecciona tu equipo. Elige tus movimientos. Gana la batalla.</p>
       </div>
+
+      {!isSignedIn && (
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <Link to="/login" style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '9px',
+            color: 'var(--accent)',
+            textDecoration: 'none',
+            padding: '0.5rem 1rem',
+            border: '1px solid var(--accent)',
+            borderRadius: '4px',
+            display: 'inline-block',
+          }}>
+            INICIAR SESION / REGISTRARSE
+          </Link>
+        </div>
+      )}
 
       <div className="card">
         <div style={{ display: 'flex', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)' }}>
@@ -120,6 +140,22 @@ export default function Home() {
         >
           {loading ? 'CARGANDO...' : tab === 'create' ? 'CREAR SALA' : 'UNIRSE A SALA'}
         </button>
+
+        {isSignedIn && (
+          <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+            <Link to="/shop" style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '8px',
+              color: '#f59e0b',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+            }}>
+              ⭐ TIENDA SHINY
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   )

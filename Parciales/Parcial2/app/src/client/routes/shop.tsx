@@ -19,18 +19,11 @@ type RarityFilter = 'all' | 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary
 const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary'] as const
 const PACKS = [
   {
-    id: 'shiny-starter-pack',
-    name: 'Shiny Starter Pack',
-    description: '3 Common + 2 Uncommon Shinies',
+    id: 'shiny-pack-5',
+    name: 'Shiny Pack (5 Pokémon)',
+    description: '5 Random Shinies guaranteed',
     price: 499,
-    icon: '⚡',
-  },
-  {
-    id: 'shiny-elite-pack',
-    name: 'Shiny Elite Pack',
-    description: '2 Rare + 2 Epic + 1 Legendary Shiny',
-    price: 1999,
-    icon: '👑',
+    icon: '✨',
   },
 ]
 
@@ -43,7 +36,7 @@ export default function Shop() {
   const [ownedShinies, setOwnedShinies] = useState<number[]>([])
   const [purchasedPacks, setPurchasedPacks] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
-  const [buyingId, setBuyingId] = useState<number | null>(null)
+  const [buyingId, setBuyingId] = useState<number | string | null>(null)
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>('all')
   const [showSuccess, setShowSuccess] = useState(false)
   const [showCanceled, setShowCanceled] = useState(false)
@@ -70,15 +63,14 @@ export default function Shop() {
       setLoading(true)
       try {
         const [pokemonRes, userRes] = await Promise.all([
-          fetch('/api/pokemon?limit=300&isShiny=true'),
+          fetch('/api/shiny?limit=150'),
           fetch(`/api/payments/user-shinies/${user.id}`),
         ])
 
         const pokemonData = await pokemonRes.json()
         const userData = await userRes.json()
 
-        const shinyPokemon = (pokemonData.data || []).filter((p: Pokemon) => p.isShiny)
-        setPokemon(shinyPokemon)
+        setPokemon(pokemonData.data || [])
         setOwnedShinies(userData.unlockedShinies || [])
         setPurchasedPacks(userData.purchasedPacks || [])
       } catch (err) {
@@ -115,7 +107,7 @@ export default function Shop() {
 
   async function handleBuyPack(packId: string) {
     if (!user) return
-    setBuyingId(-1)
+    setBuyingId(packId)
     try {
       const res = await fetch('/api/payments/create-checkout', {
         method: 'POST',
@@ -335,7 +327,7 @@ export default function Shop() {
                   ) : (
                     <button
                       onClick={() => handleBuyPack(pack.id)}
-                      disabled={buyingId === -1}
+                      disabled={buyingId === pack.id}
                       style={{
                         fontFamily: 'var(--font-display)',
                         fontSize: '8px',
@@ -344,12 +336,12 @@ export default function Shop() {
                         color: '#0a0a0f',
                         border: 'none',
                         borderRadius: '4px',
-                        cursor: buyingId === -1 ? 'not-allowed' : 'pointer',
-                        opacity: buyingId === -1 ? 0.6 : 1,
+                        cursor: buyingId === pack.id ? 'not-allowed' : 'pointer',
+                        opacity: buyingId === pack.id ? 0.6 : 1,
                         letterSpacing: '0.08em',
                       }}
                     >
-                      {buyingId === -1 ? 'CARGANDO...' : `$${(pack.price / 100).toFixed(2)} USD`}
+                      {buyingId === pack.id ? 'CARGANDO...' : `$${(pack.price / 100).toFixed(2)} USD`}
                     </button>
                   )}
                 </div>

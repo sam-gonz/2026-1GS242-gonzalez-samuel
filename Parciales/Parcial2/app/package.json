@@ -7,15 +7,19 @@
     "dev": "concurrently \"bun run dev:server\" \"bun run dev:client\"",
     "build": "vite build",
     "start": "bun run src/server/index.ts",
-    "seed": "bun run src/server/seed/importPokemon.ts"
+    "seed": "bun run src/server/seed/importPokemon.ts",
+    "seed:shiny": "bun run src/server/seed/importShiny.ts"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.61.6",
+    "@stripe/stripe-js": "^9.6.0",
     "hono": "^4.4.0",
     "mongoose": "^8.4.0",
     "nanoid": "^5.0.7",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "react-router-dom": "^6.24.0"
+    "react-router-dom": "^6.24.0",
+    "stripe": "^22.1.1"
   },
   "devDependencies": {
     "@types/bun": "latest",

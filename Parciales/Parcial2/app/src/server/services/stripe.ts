@@ -5,19 +5,11 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 })
 
 export const PACKS = {
-  'shiny-starter-pack': {
-    id: 'shiny-starter-pack',
-    name: 'Shiny Starter Pack',
-    description: '3 Common + 2 Uncommon Shinies',
+  'shiny-pack-5': {
+    id: 'shiny-pack-5',
+    name: 'Shiny Pack (5 Pokémon)',
+    description: '5 Random Shinies',
     price: 499,
-    pokedexIds: [], // filled dynamically
-  },
-  'shiny-elite-pack': {
-    id: 'shiny-elite-pack',
-    name: 'Shiny Elite Pack',
-    description: '2 Rare + 2 Epic + 1 Legendary Shiny',
-    price: 1999,
-    pokedexIds: [],
   },
 }
 
