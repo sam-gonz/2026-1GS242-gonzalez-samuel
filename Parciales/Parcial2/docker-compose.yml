@@ -42,11 +42,7 @@ services:
     depends_on:
       - mongodb
     volumes:
-      - ./app/src:/app/src
       - ./app/.env:/app/.env
-      - /app/node_modules
-      - /app/dist
-    command: ["npx", "nodemon"]
 
 volumes:
   mongo_data:
