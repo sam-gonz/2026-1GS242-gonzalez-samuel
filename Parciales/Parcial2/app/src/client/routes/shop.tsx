@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import ShinyCard from '../components/ShinyCard'
-import AnimatedBg from '../components/AnimatedBg'
+import PixelBg from '../components/PixelBg'
+import PackOpeningModal from '../components/PackOpeningModal'
 
 interface Pokemon {
   pokedexId: number
@@ -38,19 +39,18 @@ export default function Shop() {
   const [loading, setLoading] = useState(true)
   const [buyingId, setBuyingId] = useState<number | string | null>(null)
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>('all')
-  const [showSuccess, setShowSuccess] = useState(false)
   const [showCanceled, setShowCanceled] = useState(false)
+  const [packResults, setPackResults] = useState<Pokemon[] | null>(null)
+  const hasHandledSuccess = useRef(false)
 
-  useEffect(() => {
-    if (searchParams.get('success')) setShowSuccess(true)
-    if (searchParams.get('canceled')) setShowCanceled(true)
-    const timer = setTimeout(() => {
-      setShowSuccess(false)
-      setShowCanceled(false)
-      navigate('/shop', { replace: true })
-    }, 4000)
-    return () => clearTimeout(timer)
-  }, [searchParams, navigate])
+  // Cargar datos principales
+  async function fetchUserShinies(userId: string) {
+    const res = await fetch(`/api/payments/user-shinies/${userId}`)
+    const data = await res.json()
+    setOwnedShinies(data.unlockedShinies || [])
+    setPurchasedPacks(data.purchasedPacks || [])
+    return data.unlockedShinies as number[]
+  }
 
   useEffect(() => {
     if (!isLoaded) return
@@ -63,22 +63,40 @@ export default function Shop() {
       setLoading(true)
       try {
         const userId = user?.id
-        if (!userId) {
-          setLoading(false)
-          return
-        }
+        if (!userId) { setLoading(false); return }
 
-        const [pokemonRes, userRes] = await Promise.all([
+        const [pokemonRes] = await Promise.all([
           fetch('/api/shiny?limit=150'),
-          fetch(`/api/payments/user-shinies/${userId}`),
         ])
-
         const pokemonData = await pokemonRes.json()
-        const userData = await userRes.json()
+        const allPokemon: Pokemon[] = pokemonData.data || []
+        setPokemon(allPokemon)
 
-        setPokemon(pokemonData.data || [])
-        setOwnedShinies(userData.unlockedShinies || [])
-        setPurchasedPacks(userData.purchasedPacks || [])
+        const owned = await fetchUserShinies(userId)
+
+        // Si regresamos de una compra exitosa de pack
+        if (!hasHandledSuccess.current && searchParams.get('success') && searchParams.get('packId')) {
+          hasHandledSuccess.current = true
+          // Esperar un momento para que el webhook haya procesado
+          await new Promise(r => setTimeout(r, 1500))
+          const freshOwned = await fetchUserShinies(userId)
+          // Determinar qué shinies son nuevos
+          const newIds = freshOwned.filter((id: number) => !owned.includes(id))
+          // Si no hay nuevos aún (webhook lento), intentar otra vez
+          const finalNewIds = newIds.length > 0
+            ? newIds
+            : freshOwned.slice(-5) // fallback: mostrar últimos 5
+          const newPokemon = allPokemon.filter(p => finalNewIds.includes(p.pokedexId))
+          if (newPokemon.length > 0) {
+            setPackResults(newPokemon.slice(0, 5))
+          }
+          navigate('/shop', { replace: true })
+        } else if (!hasHandledSuccess.current && searchParams.get('canceled')) {
+          hasHandledSuccess.current = true
+          setShowCanceled(true)
+          setTimeout(() => setShowCanceled(false), 4000)
+          navigate('/shop', { replace: true })
+        }
       } catch (err) {
         console.error('Failed to load shop data:', err)
       } finally {
@@ -87,7 +105,7 @@ export default function Shop() {
     }
 
     fetchData()
-  }, [isLoaded, isSignedIn, navigate])
+  }, [isLoaded, isSignedIn])
 
   async function handleBuy(pokedexId: number) {
     if (!user) return
@@ -99,11 +117,8 @@ export default function Shop() {
         body: JSON.stringify({ clerkId: user.id, pokedexId }),
       })
       const data = await res.json()
-      if (data.sessionUrl) {
-        window.location.href = data.sessionUrl
-      } else {
-        alert('Error creating checkout session')
-      }
+      if (data.sessionUrl) window.location.href = data.sessionUrl
+      else alert('Error creating checkout session')
     } catch (err) {
       console.error('Purchase failed:', err)
     } finally {
@@ -121,9 +136,7 @@ export default function Shop() {
         body: JSON.stringify({ clerkId: user.id, packId }),
       })
       const data = await res.json()
-      if (data.sessionUrl) {
-        window.location.href = data.sessionUrl
-      }
+      if (data.sessionUrl) window.location.href = data.sessionUrl
     } catch (err) {
       console.error('Purchase failed:', err)
     } finally {
@@ -131,20 +144,22 @@ export default function Shop() {
     }
   }
 
+  function handleCloseModal() {
+    setPackResults(null)
+    if (user?.id) fetchUserShinies(user.id)
+  }
+
   const filteredPokemon = rarityFilter === 'all'
     ? pokemon
     : pokemon.filter((p) => p.rarity === rarityFilter)
 
-  const ownedCount = ownedShinies.length
-  const totalShiny = pokemon.length
-
   if (!isLoaded || loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a14' }}>
         <div style={{
           fontFamily: 'var(--font-display)',
           fontSize: '10px',
-          color: 'var(--accent)',
+          color: 'gold',
           animation: 'glow-pulse 1.5s ease-in-out infinite',
         }}>
           CARGANDO TIENDA...
@@ -155,7 +170,12 @@ export default function Shop() {
 
   return (
     <div style={{ minHeight: '100vh', position: 'relative' }}>
-      <AnimatedBg />
+      <PixelBg blur={true} />
+
+      {/* Modal de apertura de pack */}
+      {packResults && packResults.length > 0 && (
+        <PackOpeningModal results={packResults} onClose={handleCloseModal} />
+      )}
 
       <div style={{
         position: 'relative',
@@ -164,240 +184,116 @@ export default function Shop() {
         margin: '0 auto',
         padding: '2rem',
       }}>
+        {/* Header */}
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '2rem',
-          flexWrap: 'wrap',
-          gap: '1rem',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <button
               onClick={() => navigate(-1)}
               style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '8px',
-                color: 'var(--text-muted)',
-                background: 'none',
-                border: '1px solid var(--border)',
-                borderRadius: '4px',
-                padding: '0.5rem 0.75rem',
-                cursor: 'pointer',
-                letterSpacing: '0.06em',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
+                fontFamily: 'var(--font-display)', fontSize: '8px', color: 'var(--text-muted)',
+                background: 'none', border: '1px solid var(--border)', borderRadius: '4px',
+                padding: '0.5rem 0.75rem', cursor: 'pointer', letterSpacing: '0.06em',
+                display: 'flex', alignItems: 'center', gap: '0.4rem',
               }}
-            >
-              ← VOLVER
-            </button>
+            >← VOLVER</button>
             <h1 style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(12px, 2vw, 18px)',
-              color: 'var(--accent)',
-              marginBottom: '0',
-              textShadow: '0 0 20px rgba(255,215,0,0.4)',
-            }}>
-              TIENDA SHINY
-            </h1>
+              fontFamily: 'var(--font-display)', fontSize: 'clamp(12px, 2vw, 18px)',
+              color: 'var(--accent)', marginBottom: '0', textShadow: '0 0 20px rgba(255,215,0,0.4)',
+            }}>TIENDA SHINY</h1>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             {RARITY_ORDER.map((r) => (
-              <button
-                key={r}
-                onClick={() => setRarityFilter(r)}
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '7px',
-                  padding: '0.4rem 0.8rem',
-                  background: rarityFilter === r ? 'var(--accent)' : 'transparent',
-                  color: rarityFilter === r ? '#0a0a0f' : 'var(--text-muted)',
-                  border: `1px solid ${rarityFilter === r ? 'var(--accent)' : 'var(--border)'}`,
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                {r}
-              </button>
+              <button key={r} onClick={() => setRarityFilter(r)} style={{
+                fontFamily: 'var(--font-display)', fontSize: '7px', padding: '0.4rem 0.8rem',
+                background: rarityFilter === r ? 'var(--accent)' : 'transparent',
+                color: rarityFilter === r ? '#0a0a0f' : 'var(--text-muted)',
+                border: `1px solid ${rarityFilter === r ? 'var(--accent)' : 'var(--border)'}`,
+                borderRadius: '4px', cursor: 'pointer', letterSpacing: '0.08em', textTransform: 'uppercase',
+              }}>{r}</button>
             ))}
-            <button
-              onClick={() => setRarityFilter('all')}
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '7px',
-                padding: '0.4rem 0.8rem',
-                background: rarityFilter === 'all' ? 'var(--accent)' : 'transparent',
-                color: rarityFilter === 'all' ? '#0a0a0f' : 'var(--text-muted)',
-                border: `1px solid ${rarityFilter === 'all' ? 'var(--accent)' : 'var(--border)'}`,
-                borderRadius: '4px',
-                cursor: 'pointer',
-                letterSpacing: '0.08em',
-              }}
-            >
-              TODOS
-            </button>
+            <button onClick={() => setRarityFilter('all')} style={{
+              fontFamily: 'var(--font-display)', fontSize: '7px', padding: '0.4rem 0.8rem',
+              background: rarityFilter === 'all' ? 'var(--accent)' : 'transparent',
+              color: rarityFilter === 'all' ? '#0a0a0f' : 'var(--text-muted)',
+              border: `1px solid ${rarityFilter === 'all' ? 'var(--accent)' : 'var(--border)'}`,
+              borderRadius: '4px', cursor: 'pointer', letterSpacing: '0.08em',
+            }}>TODOS</button>
           </div>
         </div>
 
-        {showSuccess && (
-          <div style={{
-            background: 'rgba(34,197,94,0.15)',
-            border: '1px solid #22c55e',
-            borderRadius: '8px',
-            padding: '1rem',
-            marginBottom: '1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            animation: 'fadeIn 0.3s ease',
-          }}>
-            <span style={{ fontSize: '20px' }}>🎉</span>
-            <div>
-              <p style={{ fontFamily: 'var(--font-display)', fontSize: '9px', color: '#22c55e', marginBottom: '0.25rem' }}>
-                ¡COMPRA EXITOSA!
-              </p>
-              <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                Tu shiny ha sido desbloqueado. Ya está disponible en tu colección.
-              </p>
-            </div>
-          </div>
-        )}
-
+        {/* Cancelado */}
         {showCanceled && (
           <div style={{
-            background: 'rgba(239,68,68,0.1)',
-            border: '1px solid var(--red)',
-            borderRadius: '8px',
-            padding: '1rem',
-            marginBottom: '1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
+            background: 'rgba(239,68,68,0.1)', border: '1px solid var(--red)', borderRadius: '8px',
+            padding: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem',
           }}>
             <span style={{ fontSize: '20px' }}>❌</span>
-            <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-              Compra cancelada. Puedes intentar de nuevo cuando quieras.
-            </p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Compra cancelada. Puedes intentar de nuevo cuando quieras.</p>
           </div>
         )}
 
+        {/* Sección de packs */}
         <div style={{
-          background: 'rgba(16,16,26,0.8)',
-          border: '1px solid var(--border)',
-          borderRadius: '12px',
-          padding: '1.5rem',
-          marginBottom: '2rem',
+          background: 'rgba(16,16,26,0.8)', border: '1px solid var(--border)',
+          borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem',
         }}>
           <h2 style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '10px',
-            color: 'var(--accent)',
-            marginBottom: '1rem',
-            letterSpacing: '0.1em',
-          }}>
-            PACKS ESPECIALES
-          </h2>
+            fontFamily: 'var(--font-display)', fontSize: '10px', color: 'var(--accent)',
+            marginBottom: '1rem', letterSpacing: '0.1em',
+          }}>PACKS ESPECIALES</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
             {PACKS.map((pack) => {
               const owned = purchasedPacks.includes(pack.id)
               return (
-                <div
-                  key={pack.id}
-                  style={{
-                    background: 'rgba(20,20,31,0.9)',
-                    border: `1px solid ${owned ? '#22c55e' : 'var(--border)'}`,
-                    borderRadius: '8px',
-                    padding: '1.25rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.75rem',
-                    boxShadow: owned ? '0 0 20px rgba(34,197,94,0.2)' : 'none',
-                  }}
-                >
+                <div key={pack.id} style={{
+                  background: 'rgba(20,20,31,0.9)',
+                  border: `1px solid ${owned ? '#22c55e' : 'var(--border)'}`,
+                  borderRadius: '8px', padding: '1.25rem', display: 'flex',
+                  flexDirection: 'column', gap: '0.75rem',
+                  boxShadow: owned ? '0 0 20px rgba(34,197,94,0.2)' : 'none',
+                }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <span style={{ fontSize: '32px' }}>{pack.icon}</span>
                     <div>
-                      <h3 style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '8px',
-                        color: 'var(--accent)',
-                        marginBottom: '0.3rem',
-                      }}>
-                        {pack.name}
-                      </h3>
-                      <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        {pack.description}
-                      </p>
+                      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '8px', color: 'var(--accent)', marginBottom: '0.3rem' }}>{pack.name}</h3>
+                      <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{pack.description}</p>
                     </div>
                   </div>
-                  {owned ? (
-                    <div style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '8px',
-                      color: '#22c55e',
-                      textAlign: 'center',
-                      padding: '0.5rem',
-                      border: '1px solid #22c55e',
-                      borderRadius: '4px',
-                    }}>
-                      ✓ COMPRADO
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => handleBuyPack(pack.id)}
-                      disabled={buyingId === pack.id}
-                      style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '8px',
-                        padding: '0.75rem',
-                        background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                        color: '#0a0a0f',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: buyingId === pack.id ? 'not-allowed' : 'pointer',
-                        opacity: buyingId === pack.id ? 0.6 : 1,
-                        letterSpacing: '0.08em',
-                      }}
-                    >
-                      {buyingId === pack.id ? 'CARGANDO...' : `$${(pack.price / 100).toFixed(2)} USD`}
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleBuyPack(pack.id)}
+                    disabled={buyingId === pack.id}
+                    style={{
+                      fontFamily: 'var(--font-display)', fontSize: '8px', padding: '0.75rem',
+                      background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                      color: '#0a0a0f', border: 'none', borderRadius: '4px',
+                      cursor: buyingId === pack.id ? 'not-allowed' : 'pointer',
+                      opacity: buyingId === pack.id ? 0.6 : 1, letterSpacing: '0.08em',
+                    }}
+                  >
+                    {buyingId === pack.id ? 'CARGANDO...' : `$${(pack.price / 100).toFixed(2)} USD`}
+                  </button>
                 </div>
               )
             })}
           </div>
         </div>
 
+        {/* Catálogo de shinies */}
         <div>
           <h2 style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '10px',
-            color: 'var(--accent)',
-            marginBottom: '1rem',
-            letterSpacing: '0.1em',
-          }}>
-            POKEMON SHINY
-          </h2>
+            fontFamily: 'var(--font-display)', fontSize: '10px', color: 'var(--accent)',
+            marginBottom: '1rem', letterSpacing: '0.1em',
+          }}>POKEMON SHINY ({ownedShinies.length} / {pokemon.length})</h2>
           {filteredPokemon.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '3rem',
-              color: 'var(--text-muted)',
-              fontFamily: 'var(--font-display)',
-              fontSize: '9px',
-            }}>
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)', fontFamily: 'var(--font-display)', fontSize: '9px' }}>
               NO HAY SHINIES EN ESTA CATEGORIA
             </div>
           ) : (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-              gap: '1rem',
-            }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '1rem' }}>
               {filteredPokemon.map((p) => (
                 <ShinyCard
                   key={p.pokedexId}

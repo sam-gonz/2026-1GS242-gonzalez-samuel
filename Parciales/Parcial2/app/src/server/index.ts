@@ -1,44 +1,42 @@
 import { Hono } from 'hono'
-import { logger } from 'hono/logger'
-import { cors } from 'hono/cors'
-import { serveStatic } from 'hono/bun'
+import { serve } from '@hono/node-server'
+import { serveStatic } from '@hono/node-server/serve-static'
 import { connectDB } from './db'
-import pokemon from './routes/pokemon'
-import shiny from './routes/shiny'
-import rooms from './routes/rooms'
-import battle from './routes/battle'
-import payments from './routes/payments'
-import users from './routes/users'
+import pokemonRoutes from './routes/pokemon'
+import roomRoutes from './routes/rooms'
+import battleRoutes from './routes/battle'
+import userRoutes from './routes/users'
+import paymentRoutes from './routes/payments'
+import shinyRoutes from './routes/shiny'
 
 const app = new Hono()
 
-app.use('*', logger())
-app.use('*', cors())
-
-// API routes
-app.route('/api/pokemon', pokemon)
-app.route('/api/shiny', shiny)
-app.route('/api/rooms', rooms)
-app.route('/api/battle', battle)
-app.route('/api/payments', payments)
-app.route('/api/users', users)
-
-// Serve static assets (JS, CSS, images)
-app.use('/*', serveStatic({ root: '/app/dist/client' }))
-
-// SPA fallback — serve index.html for all non-API routes
-app.get('/*', async (c) => {
-  const file = Bun.file('/app/dist/client/index.html')
-  const html = await file.text()
-  return c.html(html)
+// Webhook de Stripe DEBE ir antes del bodyParser/json middleware
+// y necesita el raw body — Hono lo lee como texto crudo
+app.post('/api/payments/webhook', async (c) => {
+  // Re-delegamos al handler de payments que ya tiene la logica
+  return paymentRoutes.fetch(new Request(c.req.raw.url.replace('/api/payments/webhook', '/webhook'), {
+    method: c.req.method,
+    headers: c.req.raw.headers,
+    body: c.req.raw.body,
+  }))
 })
 
-connectDB().then(() => {
-  console.log('MongoDB connected')
-  console.log(`Server running on port ${process.env.PORT ?? 3000}`)
-})
+app.route('/api/pokemon',   pokemonRoutes)
+app.route('/api/rooms',     roomRoutes)
+app.route('/api/battle',    battleRoutes)
+app.route('/api/users',     userRoutes)
+app.route('/api/payments',  paymentRoutes)
+app.route('/api/shiny',     shinyRoutes)
 
-export default {
-  port: Number(process.env.PORT) || 3000,
-  fetch: app.fetch,
+app.use('*', serveStatic({ root: './dist/client' }))
+app.get('*', serveStatic({ path: './dist/client/index.html' }))
+
+async function start() {
+  await connectDB()
+  const port = Number(process.env.PORT) || 3000
+  serve({ fetch: app.fetch, port })
+  console.log(`Server running on http://localhost:${port}`)
 }
+
+start().catch(console.error)
