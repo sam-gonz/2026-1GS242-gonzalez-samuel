@@ -41,7 +41,27 @@ export default function Shop() {
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>('all')
   const [showCanceled, setShowCanceled] = useState(false)
   const [packResults, setPackResults] = useState<Pokemon[] | null>(null)
+  const returnPath = useRef<string>('/')
   const hasHandledSuccess = useRef(false)
+
+  useEffect(() => {
+    // Intentar leer ?from= param primero (el mas confiable)
+    const fromParam = searchParams.get('from')
+    if (fromParam) {
+      returnPath.current = fromParam
+      return
+    }
+    // Fallback: document.referrer si es de nuestro mismo host y no es stripe ni shop
+    const ref = document.referrer
+    if (ref && !ref.includes('stripe.com') && !ref.includes('/shop')) {
+      try {
+        const url = new URL(ref)
+        if (url.host === window.location.host) {
+          returnPath.current = url.pathname
+        }
+      } catch {}
+    }
+  }, [])
 
   async function fetchUserShinies(userId: string) {
     const res = await fetch(`/api/payments/user-shinies/${userId}`)
@@ -61,34 +81,27 @@ export default function Shop() {
         const userId = user?.id
         if (!userId) { setLoading(false); return }
 
-        // Leer params ANTES de cualquier navigate que los limpie
-        const isSuccess = searchParams.get('success') === 'true'
-        const idsParam  = searchParams.get('ids')      // pokedexIds del pack
+        const isSuccess  = searchParams.get('success') === 'true'
+        const idsParam   = searchParams.get('ids')
         const isCanceled = searchParams.get('canceled') === 'true'
 
-        // Cargar catalogo y shinies del usuario en paralelo
         const [pokemonRes] = await Promise.all([fetch('/api/shiny?limit=150')])
         const pokemonData = await pokemonRes.json()
         const allPokemon: Pokemon[] = pokemonData.data || []
         setPokemon(allPokemon)
         await fetchUserShinies(userId)
 
-        // Limpiar URL inmediatamente (sin perder el estado)
         if ((isSuccess || isCanceled) && !hasHandledSuccess.current) {
           hasHandledSuccess.current = true
           navigate('/shop', { replace: true })
         }
 
-        if (isSuccess && idsParam && !hasHandledSuccess.current === false) {
-          // Los IDs vienen directamente de la URL — no dependemos del webhook
+        if (isSuccess && idsParam) {
           const ids = idsParam.split(',').map(Number).filter(Boolean)
           const newPokemon = ids
             .map(id => allPokemon.find(p => p.pokedexId === id))
             .filter(Boolean) as Pokemon[]
-
-          if (newPokemon.length > 0) {
-            setPackResults(newPokemon.slice(0, 5))
-          }
+          if (newPokemon.length > 0) setPackResults(newPokemon.slice(0, 5))
         } else if (isCanceled) {
           setShowCanceled(true)
           setTimeout(() => setShowCanceled(false), 4000)
@@ -102,6 +115,10 @@ export default function Shop() {
 
     fetchData()
   }, [isLoaded, isSignedIn])
+
+  function handleGoBack() {
+    navigate(returnPath.current)
+  }
 
   async function handleBuy(pokedexId: number) {
     if (!user) return
@@ -168,11 +185,10 @@ export default function Shop() {
       )}
 
       <div style={{ position: 'relative', zIndex: 1, maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
-        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <button
-              onClick={() => navigate(-1)}
+              onClick={handleGoBack}
               style={{
                 fontFamily: 'var(--font-display)', fontSize: '8px', color: 'var(--text-muted)',
                 background: 'none', border: '1px solid var(--border)', borderRadius: '4px',
@@ -214,7 +230,6 @@ export default function Shop() {
           </div>
         )}
 
-        {/* Packs */}
         <div style={{ background: 'rgba(16,16,26,0.8)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem' }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '10px', color: 'var(--accent)', marginBottom: '1rem', letterSpacing: '0.1em' }}>PACKS ESPECIALES</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
@@ -250,7 +265,6 @@ export default function Shop() {
           </div>
         </div>
 
-        {/* Catalogo */}
         <div>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '10px', color: 'var(--accent)', marginBottom: '1rem', letterSpacing: '0.1em' }}>
             POKEMON SHINY ({ownedShinies.length} / {pokemon.length})
