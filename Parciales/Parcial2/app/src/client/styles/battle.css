@@ -5,7 +5,6 @@
   min-height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  /* fondo viene de PixelBg sin blur — no ponemos background aquí */
   position: relative;
 }
 
@@ -21,7 +20,7 @@
   z-index: 2;
 }
 
-/* Arena: perspectiva tipo Pokémon clásico */
+/* Arena */
 .battle-arena {
   position: relative;
   z-index: 2;
@@ -30,25 +29,22 @@
   align-items: stretch;
   padding: 1.5rem 2rem;
   gap: 1rem;
-  /* perspectiva global para profundidad */
   perspective: 900px;
 }
 
-/* ── Fila del oponente (arriba, pequeño / lejos) ── */
 .battle-arena-row--opponent {
   display: flex;
   justify-content: flex-end;
   align-items: flex-start;
 }
 
-/* ── Fila del jugador (abajo, grande / cerca) ── */
 .battle-arena-row--player {
   display: flex;
   justify-content: flex-start;
   align-items: flex-end;
 }
 
-/* Tarjeta de cada Pokémon en batalla */
+/* Tarjeta de Pokémon */
 .pokemon-slot {
   background: rgba(16,16,26,0.82);
   backdrop-filter: blur(4px);
@@ -64,7 +60,6 @@
   width: 220px;
 }
 
-/* Slot del jugador — más grande, borde dorado */
 .pokemon-slot--mine {
   width: 260px;
   border-color: var(--accent);
@@ -80,25 +75,24 @@
   filter: grayscale(1);
 }
 
-/* ── Sprites ── */
-/* Oponente: sprite frontal, pequeño (lejos) */
+/* Sprites */
 .pokemon-sprite--opponent {
   width: 72px;
   height: 72px;
   image-rendering: pixelated;
-  /* sin flip — sprite frontal del oponente */
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+  display: block;
 }
 
-/* Jugador: sprite de espalda, grande (cerca) */
 .pokemon-sprite--mine {
   width: 120px;
   height: 120px;
   image-rendering: pixelated;
   filter: drop-shadow(0 6px 12px rgba(255,215,0,0.2));
+  display: block;
 }
 
-/* HP bar dentro del slot */
+/* HP */
 .pokemon-hp-label {
   font-family: var(--font-display);
   font-size: 7px;
@@ -107,7 +101,6 @@
   width: 100%;
 }
 
-/* HP bars */
 .hp-bar-wrap {
   width: 100%;
   height: 6px;
@@ -153,6 +146,57 @@
 }
 
 /* =====================
+   DAMAGE NUMBERS
+   ===================== */
+.dmg-number {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow:
+    0 0 6px rgba(255,80,80,0.9),
+    1px 1px 0 rgba(0,0,0,0.8);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 10;
+  animation: dmg-float 1.2s ease-out forwards;
+}
+
+.dmg-number--crit {
+  color: #FFD700;
+  font-size: 18px;
+  text-shadow:
+    0 0 10px rgba(255,215,0,0.9),
+    1px 1px 0 rgba(0,0,0,0.8);
+  animation: dmg-float-crit 1.2s ease-out forwards;
+}
+
+.dmg-number--super {
+  color: #ff6b00;
+  text-shadow:
+    0 0 8px rgba(255,107,0,0.9),
+    1px 1px 0 rgba(0,0,0,0.8);
+}
+
+@keyframes dmg-float {
+  0%   { opacity: 1;   transform: translateX(-50%) translateY(0px)   scale(1.2); }
+  20%  { opacity: 1;   transform: translateX(-50%) translateY(-12px) scale(1.4); }
+  60%  { opacity: 1;   transform: translateX(-50%) translateY(-28px) scale(1); }
+  100% { opacity: 0;   transform: translateX(-50%) translateY(-44px) scale(0.8); }
+}
+
+@keyframes dmg-float-crit {
+  0%   { opacity: 1;   transform: translateX(-50%) translateY(0px)   scale(1.5) rotate(-4deg); }
+  20%  { opacity: 1;   transform: translateX(-50%) translateY(-16px) scale(1.7) rotate(2deg); }
+  60%  { opacity: 1;   transform: translateX(-50%) translateY(-34px) scale(1.2) rotate(-1deg); }
+  100% { opacity: 0;   transform: translateX(-50%) translateY(-52px) scale(0.9) rotate(0deg); }
+}
+
+/* =====================
    BOTTOM PANEL
    ===================== */
 .battle-bottom {
@@ -166,7 +210,7 @@
   z-index: 2;
 }
 
-/* Grid de 4 movimientos */
+/* Movimientos */
 .moves-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -250,7 +294,7 @@
 .log-entry--switch   { color: var(--blue); }
 .log-entry--win      { color: var(--green); font-family: var(--font-display); font-size: 9px; }
 
-/* Overlay "ELIGE TU SIGUIENTE POKÉMON" */
+/* Overlay cambio forzado */
 .forced-switch-overlay {
   position: fixed;
   inset: 0;
@@ -306,7 +350,7 @@
 }
 
 /* =====================
-   VICTORY SCREEN
+   VICTORY / DEFEAT
    ===================== */
 .victory-screen {
   min-height: 100vh;
@@ -329,29 +373,50 @@
   color: var(--red);
 }
 
-/* Animaciones de batalla */
+/* =====================
+   ANIMACIONES DE BATALLA
+   ===================== */
 .sprite-attack {
-  animation: bounce-attack 0.3s ease;
+  animation: bounce-attack 0.35s ease !important;
 }
 .sprite-hit {
-  animation: shake 0.4s ease;
+  animation: shake 0.45s ease !important;
 }
 .sprite-faint {
-  animation: faint-out 0.6s ease forwards;
+  animation: faint-out 0.6s ease forwards !important;
 }
 
 @keyframes bounce-attack {
-  0%,100% { transform: translateX(0); }
-  50%      { transform: translateX(12px); }
+  0%   { transform: translateX(0) scale(1); }
+  30%  { transform: translateX(14px) scale(1.1); }
+  60%  { transform: translateX(6px) scale(1.05); }
+  100% { transform: translateX(0) scale(1); }
 }
+
+@keyframes shake {
+  0%,100% { transform: translateX(0); filter: brightness(1); }
+  15%     { transform: translateX(-6px); filter: brightness(2) saturate(0); }
+  30%     { transform: translateX(6px);  filter: brightness(1); }
+  45%     { transform: translateX(-4px); filter: brightness(2) saturate(0); }
+  60%     { transform: translateX(4px);  filter: brightness(1); }
+  75%     { transform: translateX(-2px); }
+}
+
 @keyframes faint-out {
   0%   { opacity: 1; transform: translateY(0); }
   100% { opacity: 0; transform: translateY(20px); }
 }
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
 @keyframes glow-pulse {
   0%,100% { text-shadow: 0 0 8px rgba(255,215,0,0.4); }
   50%     { text-shadow: 0 0 24px rgba(255,215,0,0.9); }

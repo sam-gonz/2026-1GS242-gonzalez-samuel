@@ -22,15 +22,37 @@ function logClass(msg: string) {
   return 'log-entry'
 }
 
-/** Sprite de espalda del jugador: reemplaza /front/ por /back/ en la URL de PokéAPI */
+/** Extrae el número de daño de un mensaje de log tipo "X causó 42 de daño" */
+function extractDamage(msg: string): number | null {
+  const m = msg.match(/(\d+)\s*(?:de\s*)?da[ñn]o/i)
+  return m ? parseInt(m[1]) : null
+}
+
+/** Sprite de espalda del jugador */
 function backSprite(spriteUrl: string): string {
   if (!spriteUrl) return spriteUrl
-  // PokeAPI pattern: .../front_default.png  →  .../back_default.png
   return spriteUrl
     .replace('/front_default', '/back_default')
     .replace('/front_shiny',   '/back_shiny')
-    // fallback por si el path usa otro patrón
     .replace('front-default', 'back-default')
+}
+
+// ─── Componente de número de daño flotante ────────────────────────────────────
+interface DmgNumber { id: number; value: number; isCrit: boolean; isSuper: boolean }
+
+function DamageNumbers({ numbers }: { numbers: DmgNumber[] }) {
+  return (
+    <>
+      {numbers.map((d) => (
+        <div
+          key={d.id}
+          className={`dmg-number ${d.isCrit ? 'dmg-number--crit' : ''} ${d.isSuper ? 'dmg-number--super' : ''}`}
+        >
+          -{d.value}
+        </div>
+      ))}
+    </>
+  )
 }
 
 export default function BattleScreen() {
@@ -45,10 +67,15 @@ export default function BattleScreen() {
   const [mode, setMode]                 = useState<'move' | 'switch'>('move')
   const [submitting, setSubmitting]     = useState(false)
   const [spriteAnim, setSpriteAnim]     = useState<Record<string, string>>({})
-  // overlay de cambio forzado cuando el pokemon activo cae
   const [forcedSwitch, setForcedSwitch] = useState(false)
+
+  // números de daño flotantes por slot: 'opp' | 'me'
+  const [myDmgNumbers,  setMyDmgNumbers]  = useState<DmgNumber[]>([])
+  const [oppDmgNumbers, setOppDmgNumbers] = useState<DmgNumber[]>([])
+  const dmgCounter = useRef(0)
+
   const logRef          = useRef<HTMLDivElement>(null)
-  const prevActiveRef   = useRef<number | null>(null)  // trackea el activePokemonId anterior
+  const prevLogLength   = useRef<number>(0)
 
   useEffect(() => {
     if (!playerName) navigate('/')
@@ -64,6 +91,52 @@ export default function BattleScreen() {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
   }, [battle?.battleLog])
 
+  // Detectar nuevas entradas del log para mostrar daños y animaciones
+  useEffect(() => {
+    if (!battle?.battleLog) return
+    const log: any[] = battle.battleLog
+    const prevLen = prevLogLength.current
+    prevLogLength.current = log.length
+    if (log.length <= prevLen) return
+
+    const newEntries = log.slice(prevLen)
+    const me  = battle.players?.find((p: any) => p.name === playerName)
+    const opp = battle.players?.find((p: any) => p.name !== playerName)
+
+    newEntries.forEach((entry: any) => {
+      const msg    = entry.message as string
+      const damage = extractDamage(msg)
+      const isCrit  = msg.includes('critico')
+      const isSuper = msg.includes('super efectivo')
+
+      if (damage === null) return
+
+      // Si el mensaje menciona al oponente atacando → el daño lo recibo yo
+      const oppAttacking = opp && msg.toLowerCase().includes(opp.activePokemonName?.toLowerCase())
+      const dmgEntry: DmgNumber = { id: ++dmgCounter.current, value: damage, isCrit, isSuper }
+
+      if (oppAttacking) {
+        // Oponente atacó → animar sprite mío y mostrar número en mi slot
+        const myId = me?.activePokemonId
+        if (myId) {
+          setSpriteAnim((p) => ({ ...p, [myId]: 'sprite-hit' }))
+          setTimeout(() => setSpriteAnim((p) => { const n = { ...p }; delete n[myId]; return n }), 500)
+        }
+        setMyDmgNumbers((prev) => [...prev, dmgEntry])
+        setTimeout(() => setMyDmgNumbers((prev) => prev.filter((d) => d.id !== dmgEntry.id)), 1200)
+      } else {
+        // Yo ataqué → animar sprite del oponente y mostrar número en su slot
+        const oppId = opp?.activePokemonId
+        if (oppId) {
+          setSpriteAnim((p) => ({ ...p, [oppId]: 'sprite-hit' }))
+          setTimeout(() => setSpriteAnim((p) => { const n = { ...p }; delete n[oppId]; return n }), 500)
+        }
+        setOppDmgNumbers((prev) => [...prev, dmgEntry])
+        setTimeout(() => setOppDmgNumbers((prev) => prev.filter((d) => d.id !== dmgEntry.id)), 1200)
+      }
+    })
+  }, [battle?.battleLog])
+
   // Detectar cuando mi pokémon activo cayó → mostrar overlay de cambio forzado
   useEffect(() => {
     if (!battle) return
@@ -71,13 +144,10 @@ export default function BattleScreen() {
     if (!me) return
     const active = me.team?.find((p: any) => p.pokedexId === me.activePokemonId)
     if (!active) return
-
-    // Si el activo tiene 0 HP y hay pokemones vivos → forzar switch
     const hasAlive = me.team.some((p: any) => p.currentHp > 0 && p.pokedexId !== me.activePokemonId)
     if (active.currentHp <= 0 && hasAlive && battle.status === 'active') {
       setForcedSwitch(true)
     } else {
-      // Si el servidor ya actualizó el activo (cambio ya aplicado), cerrar overlay
       if (active.currentHp > 0) setForcedSwitch(false)
     }
   }, [battle])
@@ -95,21 +165,19 @@ export default function BattleScreen() {
     if (!actionToSend) return
     setSubmitting(true)
     try {
+      // Animación de ataque en mi sprite
       const myId = getMyPlayer()?.activePokemonId
-      if (myId) setSpriteAnim((p) => ({ ...p, [myId]: 'sprite-attack' }))
-      setTimeout(() => setSpriteAnim({}), 400)
+      if (myId) {
+        setSpriteAnim((p) => ({ ...p, [myId]: 'sprite-attack' }))
+        setTimeout(() => setSpriteAnim((p) => { const n = { ...p }; delete n[myId]; return n }), 400)
+      }
 
       const res = await fetch(`${API}/battle/${roomCode}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerName, action: actionToSend }),
       })
-      const data = await res.json()
-      if (data.log) {
-        const opp = getOpponentPlayer()
-        if (opp) setSpriteAnim((p) => ({ ...p, [opp.activePokemonId]: 'sprite-hit' }))
-        setTimeout(() => setSpriteAnim({}), 500)
-      }
+      await res.json()
       setAction(null)
       setForcedSwitch(false)
       await fetchBattle()
@@ -117,7 +185,6 @@ export default function BattleScreen() {
     finally { setSubmitting(false) }
   }
 
-  /** Cambio forzado: enviar inmediatamente sin esperar confirmación manual */
   async function handleForcedSwitch(pokedexId: number) {
     setForcedSwitch(false)
     await submitAction({ type: 'switch', pokemonId: pokedexId })
@@ -183,7 +250,6 @@ export default function BattleScreen() {
 
   return (
     <div className="battle-screen">
-      {/* Fondo igual que Shop, sin blur */}
       <PixelBg blur={false} />
 
       {/* Overlay de cambio forzado */}
@@ -215,21 +281,23 @@ export default function BattleScreen() {
         </span>
       </div>
 
-      {/* Arena: oponente arriba (pequeño/lejos), jugador abajo (grande/cerca) */}
+      {/* Arena */}
       <div className="battle-arena">
-        {/* Oponente — arriba, sprite frontal, tarjeta más pequeña */}
+        {/* Oponente */}
         <div className="battle-arena-row--opponent">
-          <div className={`pokemon-slot ${oppActive?.currentHp <= 0 ? 'pokemon-slot--fainted' : ''}`}>
+          <div className={`pokemon-slot ${oppActive?.currentHp <= 0 ? 'pokemon-slot--fainted' : ''}`} style={{ position: 'relative' }}>
             <span style={{ fontFamily: 'var(--font-display)', fontSize: '7px', color: 'var(--text-muted)', alignSelf: 'flex-start' }}>OPONENTE</span>
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
               {oppActive?.types?.map((t: string) => <span key={t} className={`type-badge type-${t}`}>{t}</span>)}
             </div>
-            {/* Sprite frontal del oponente */}
-            <img
-              src={oppActive?.spriteUrl}
-              alt={oppActive?.name}
-              className={`pokemon-sprite--opponent ${spriteAnim[oppActive?.pokedexId] ?? ''}`}
-            />
+            <div style={{ position: 'relative' }}>
+              <img
+                src={oppActive?.spriteUrl}
+                alt={oppActive?.name}
+                className={`pokemon-sprite--opponent ${spriteAnim[oppActive?.pokedexId] ?? ''}`}
+              />
+              <DamageNumbers numbers={oppDmgNumbers} />
+            </div>
             <span style={{ fontFamily: 'var(--font-display)', fontSize: '8px', textTransform: 'capitalize', color: 'var(--text)' }}>{oppActive?.name}</span>
             {oppActive?.status && (
               <span className={`status-badge status-${oppActive.status.name}`}>{oppActive.status.name.toUpperCase()} ({oppActive.status.remainingTurns}T)</span>
@@ -242,20 +310,22 @@ export default function BattleScreen() {
           </div>
         </div>
 
-        {/* Jugador — abajo, sprite de espalda, tarjeta más grande */}
+        {/* Jugador */}
         <div className="battle-arena-row--player">
-          <div className={`pokemon-slot pokemon-slot--mine ${myActive?.currentHp <= 0 ? 'pokemon-slot--fainted' : ''}`}>
+          <div className={`pokemon-slot pokemon-slot--mine ${myActive?.currentHp <= 0 ? 'pokemon-slot--fainted' : ''}`} style={{ position: 'relative' }}>
             <span style={{ fontFamily: 'var(--font-display)', fontSize: '7px', color: 'var(--accent)', alignSelf: 'flex-start' }}>TU POKÉMON</span>
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
               {myActive?.types?.map((t: string) => <span key={t} className={`type-badge type-${t}`}>{t}</span>)}
             </div>
-            {/* Sprite de ESPALDA para el jugador */}
-            <img
-              src={backSprite(myActive?.spriteUrl ?? '')}
-              alt={myActive?.name}
-              className={`pokemon-sprite--mine ${spriteAnim[myActive?.pokedexId] ?? ''}`}
-              onError={(e) => { (e.target as HTMLImageElement).src = myActive?.spriteUrl ?? '' }}
-            />
+            <div style={{ position: 'relative' }}>
+              <img
+                src={backSprite(myActive?.spriteUrl ?? '')}
+                alt={myActive?.name}
+                className={`pokemon-sprite--mine ${spriteAnim[myActive?.pokedexId] ?? ''}`}
+                onError={(e) => { (e.target as HTMLImageElement).src = myActive?.spriteUrl ?? '' }}
+              />
+              <DamageNumbers numbers={myDmgNumbers} />
+            </div>
             <span style={{ fontFamily: 'var(--font-display)', fontSize: '8px', textTransform: 'capitalize', color: 'var(--text)' }}>{myActive?.name}</span>
             {myActive?.status && (
               <span className={`status-badge status-${myActive.status.name}`}>{myActive.status.name.toUpperCase()} ({myActive.status.remainingTurns}T)</span>

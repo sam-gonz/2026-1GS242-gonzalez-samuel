@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
-import { useUser } from '@clerk/clerk-react'
+import { useState } from 'react'
 
 interface ShinyCardProps {
   pokedexId: number
@@ -22,6 +21,7 @@ const RARITY_COLORS: Record<string, string> = {
 }
 
 export default function ShinyCard({
+  pokedexId,   // ← FIX: faltaba desestructurar pokedexId
   name,
   types,
   rarity,

@@ -56,7 +56,8 @@ payments.post('/create-checkout', async (c) => {
         quantity: 1,
       }],
       mode: 'payment',
-      success_url: `${origin}/shop?success=true&pokedexId=${pokedexId}&ck=${clerkId}`,
+      // FIX: añadir &ids= para que el frontend pueda llamar confirm-purchase al regresar
+      success_url: `${origin}/shop?success=true&ids=${pokedexId}&ck=${clerkId}`,
       cancel_url:  `${origin}/shop?canceled=true`,
       metadata: { clerkId, pokedexIds: String(pokedexId), type: 'individual' },
     })
@@ -67,7 +68,6 @@ payments.post('/create-checkout', async (c) => {
 })
 
 // ─── Confirmar compra desde success_url (fallback si el webhook no llega) ─────
-// El frontend llama esto cuando regresa de Stripe con ?success=true
 payments.post('/confirm-purchase', async (c) => {
   const { clerkId, pokedexIds, packId } = await c.req.json()
 
