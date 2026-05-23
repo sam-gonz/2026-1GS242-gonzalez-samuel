@@ -17,6 +17,22 @@ services:
     build:
       context: ./app
       dockerfile: Dockerfile
+    profiles: ["production"]
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017/pokemon_battle
+      - PORT=3000
+    depends_on:
+      - mongodb
+
+  app-dev:
+    container_name: pokemon-app-dev
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    profiles: ["development"]
     restart: unless-stopped
     ports:
       - '3000:3000'
@@ -26,8 +42,11 @@ services:
     depends_on:
       - mongodb
     volumes:
-      - ./app:/app
+      - ./app/src:/app/src
+      - ./app/.env:/app/.env
       - /app/node_modules
+      - /app/dist
+    command: ["npx", "nodemon"]
 
 volumes:
   mongo_data:

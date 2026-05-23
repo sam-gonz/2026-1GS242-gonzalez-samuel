@@ -1,0 +1,7 @@
+{
+  "watch": ["src/server"],
+  "ext": "ts",
+  "exec": "bun run src/server/index.ts",
+  "legacyWatch": true,
+  "delay": 500
+}
