@@ -29,6 +29,15 @@ const RARITY_GLOW: Record<string, string> = {
   common:    'rgba(148,163,184,0.2)',
 }
 
+function buildRouletteItems(results: ShinyResult[]): ShinyResult[] {
+  const pool = [...results]
+  const filler: ShinyResult[] = []
+  for (let i = 0; i < 40; i++) {
+    filler.push(pool[i % pool.length])
+  }
+  return [...filler, ...results]
+}
+
 export default function PackOpeningModal({ results, onClose }: Props) {
   const [phase, setPhase] = useState<'roulette' | 'reveal'>('roulette')
   const [rouletteOffset, setRouletteOffset] = useState(0)
@@ -36,26 +45,15 @@ export default function PackOpeningModal({ results, onClose }: Props) {
   const [revealedCards, setRevealedCards] = useState<boolean[]>(Array(5).fill(false))
   const rafRef = useRef<number>(0)
   const startTimeRef = useRef<number>(0)
+  const rouletteItems = useRef<ShinyResult[]>(buildRouletteItems(results))
+
   const CARD_W = 140
   const CARD_GAP = 16
   const CARD_TOTAL = CARD_W + CARD_GAP
-
-  // Generar lista larga para la ruleta (20 ciclos + los 5 reales al final)
-  const rouletteItems = useRef<ShinyResult[]>(() => {
-    const pool = [...results]
-    const filler: ShinyResult[] = []
-    // 40 cartas de relleno antes del resultado real
-    for (let i = 0; i < 40; i++) {
-      filler.push(pool[i % pool.length])
-    }
-    return [...filler, ...results]
-  }())
-
-  const FINAL_INDEX = 40 // donde comienzan los resultados reales
+  const FINAL_INDEX = 40
   const TARGET_OFFSET = -(FINAL_INDEX * CARD_TOTAL) + window.innerWidth / 2 - CARD_W / 2
 
   useEffect(() => {
-    // Fase ruleta: animar con easing
     const duration = 4200
     startTimeRef.current = performance.now()
 
@@ -70,7 +68,6 @@ export default function PackOpeningModal({ results, onClose }: Props) {
       const offset = eased * TARGET_OFFSET
       setRouletteOffset(offset)
 
-      // Calcular qué carta está centrada
       const centeredCard = Math.round(-offset / CARD_TOTAL)
       setCurrentIdx(Math.max(0, Math.min(centeredCard, rouletteItems.current.length - 1)))
 
@@ -88,7 +85,6 @@ export default function PackOpeningModal({ results, onClose }: Props) {
 
   useEffect(() => {
     if (phase !== 'reveal') return
-    // Revelar cartas una por una
     results.forEach((_, i) => {
       setTimeout(() => {
         setRevealedCards(prev => {
@@ -129,13 +125,12 @@ export default function PackOpeningModal({ results, onClose }: Props) {
           top: 0;
           left: 0;
           will-change: transform;
-          transition: none;
         }
         .pack-roulette-card {
           width: 140px;
           height: 200px;
           border-radius: 8px;
-          border: 2px solid var(--border, #333);
+          border: 2px solid #333;
           background: #1a1a2e;
           display: flex;
           flex-direction: column;
@@ -185,7 +180,6 @@ export default function PackOpeningModal({ results, onClose }: Props) {
           transition: transform 0.5s cubic-bezier(0.16,1,0.3,1),
                       opacity 0.4s ease,
                       box-shadow 0.4s ease;
-          cursor: default;
         }
         .pack-reveal-card.revealed {
           transform: rotateY(0deg) scale(1);
@@ -204,10 +198,7 @@ export default function PackOpeningModal({ results, onClose }: Props) {
           cursor: pointer;
           transition: border-color 0.15s, color 0.15s;
         }
-        .pack-close-btn:hover {
-          border-color: gold;
-          color: gold;
-        }
+        .pack-close-btn:hover { border-color: gold; color: gold; }
         .pack-title {
           font-family: var(--font-display, monospace);
           font-size: 11px;
@@ -252,10 +243,7 @@ export default function PackOpeningModal({ results, onClose }: Props) {
                     }}>
                       {item.name}
                     </span>
-                    <span
-                      className="rarity-label"
-                      style={{ color: RARITY_COLORS[item.rarity] || '#fff' }}
-                    >
+                    <span className="rarity-label" style={{ color: RARITY_COLORS[item.rarity] || '#fff' }}>
                       {item.rarity}
                     </span>
                   </div>
@@ -298,10 +286,7 @@ export default function PackOpeningModal({ results, onClose }: Props) {
                   }}>
                     {item.name}
                   </span>
-                  <span
-                    className="rarity-label"
-                    style={{ color: RARITY_COLORS[item.rarity] || '#fff' }}
-                  >
+                  <span className="rarity-label" style={{ color: RARITY_COLORS[item.rarity] || '#fff' }}>
                     ✦ {item.rarity}
                   </span>
                 </div>
