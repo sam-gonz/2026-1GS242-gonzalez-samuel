@@ -5,21 +5,8 @@
   min-height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  background: var(--bg);
-  background-image:
-    radial-gradient(ellipse at 50% 0%, rgba(255,215,0,0.06) 0%, transparent 55%),
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 39px,
-      rgba(255,255,255,0.012) 40px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 39px,
-      rgba(255,255,255,0.012) 40px
-    );
+  /* fondo viene de PixelBg sin blur — no ponemos background aquí */
+  position: relative;
 }
 
 /* Top bar */
@@ -30,20 +17,41 @@
   padding: 0.75rem 1.5rem;
   border-bottom: 1px solid var(--border);
   background: var(--bg-card);
+  position: relative;
+  z-index: 2;
 }
 
-/* Arena: dos lados del campo */
+/* Arena: perspectiva tipo Pokémon clásico */
 .battle-arena {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 1.5rem 2rem;
   gap: 1rem;
-  padding: 1.5rem;
-  align-items: start;
+  /* perspectiva global para profundidad */
+  perspective: 900px;
+}
+
+/* ── Fila del oponente (arriba, pequeño / lejos) ── */
+.battle-arena-row--opponent {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+/* ── Fila del jugador (abajo, grande / cerca) ── */
+.battle-arena-row--player {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-end;
 }
 
 /* Tarjeta de cada Pokémon en batalla */
 .pokemon-slot {
-  background: var(--bg-card);
+  background: rgba(16,16,26,0.82);
+  backdrop-filter: blur(4px);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 1rem;
@@ -53,7 +61,16 @@
   gap: 0.6rem;
   position: relative;
   transition: border-color 0.3s;
+  width: 220px;
 }
+
+/* Slot del jugador — más grande, borde dorado */
+.pokemon-slot--mine {
+  width: 260px;
+  border-color: var(--accent);
+  box-shadow: 0 0 20px rgba(255,215,0,0.12);
+}
+
 .pokemon-slot--active {
   border-color: var(--accent);
   box-shadow: 0 0 16px rgba(255,215,0,0.1);
@@ -63,13 +80,22 @@
   filter: grayscale(1);
 }
 
-.pokemon-sprite {
-  width: 96px;
-  height: 96px;
-  image-rendering: pixelated;
-}
+/* ── Sprites ── */
+/* Oponente: sprite frontal, pequeño (lejos) */
 .pokemon-sprite--opponent {
-  transform: scaleX(-1);
+  width: 72px;
+  height: 72px;
+  image-rendering: pixelated;
+  /* sin flip — sprite frontal del oponente */
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+}
+
+/* Jugador: sprite de espalda, grande (cerca) */
+.pokemon-sprite--mine {
+  width: 120px;
+  height: 120px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 6px 12px rgba(255,215,0,0.2));
 }
 
 /* HP bar dentro del slot */
@@ -79,6 +105,51 @@
   color: var(--text-muted);
   align-self: flex-start;
   width: 100%;
+}
+
+/* HP bars */
+.hp-bar-wrap {
+  width: 100%;
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.hp-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.hp-bar--high { background: #22c55e; }
+.hp-bar--mid  { background: #f59e0b; }
+.hp-bar--low  { background: #ef4444; }
+
+/* Status badge */
+.status-badge {
+  font-family: var(--font-display);
+  font-size: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+.status-burn     { color: #f97316; border-color: #f97316; }
+.status-poison   { color: #a855f7; border-color: #a855f7; }
+.status-paralysis{ color: #eab308; border-color: #eab308; }
+
+/* Type badges */
+.type-badge {
+  font-family: var(--font-display);
+  font-size: 6px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: rgba(255,255,255,0.08);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
 }
 
 /* =====================
@@ -91,6 +162,8 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+  position: relative;
+  z-index: 2;
 }
 
 /* Grid de 4 movimientos */
@@ -177,6 +250,61 @@
 .log-entry--switch   { color: var(--blue); }
 .log-entry--win      { color: var(--green); font-family: var(--font-display); font-size: 9px; }
 
+/* Overlay "ELIGE TU SIGUIENTE POKÉMON" */
+.forced-switch-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  z-index: 100;
+  animation: fadeIn 0.25s ease;
+}
+.forced-switch-overlay h2 {
+  font-family: var(--font-display);
+  font-size: clamp(10px, 2vw, 16px);
+  color: var(--accent);
+  letter-spacing: 0.1em;
+}
+.forced-switch-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  max-width: 480px;
+}
+.forced-switch-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: rgba(16,16,26,0.95);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 110px;
+}
+.forced-switch-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(255,215,0,0.15);
+}
+.forced-switch-card span {
+  font-family: var(--font-display);
+  font-size: 7px;
+  text-transform: capitalize;
+  color: var(--text);
+}
+.forced-switch-card small {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
 /* =====================
    VICTORY SCREEN
    ===================== */
@@ -219,4 +347,12 @@
 @keyframes faint-out {
   0%   { opacity: 1; transform: translateY(0); }
   100% { opacity: 0; transform: translateY(20px); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes glow-pulse {
+  0%,100% { text-shadow: 0 0 8px rgba(255,215,0,0.4); }
+  50%     { text-shadow: 0 0 24px rgba(255,215,0,0.9); }
 }

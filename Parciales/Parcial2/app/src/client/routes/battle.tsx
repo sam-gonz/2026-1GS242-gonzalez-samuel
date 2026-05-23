@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
+import PixelBg from '../components/PixelBg'
 import '../styles/battle.css'
 
 const API = '/api'
@@ -21,6 +22,17 @@ function logClass(msg: string) {
   return 'log-entry'
 }
 
+/** Sprite de espalda del jugador: reemplaza /front/ por /back/ en la URL de PokéAPI */
+function backSprite(spriteUrl: string): string {
+  if (!spriteUrl) return spriteUrl
+  // PokeAPI pattern: .../front_default.png  →  .../back_default.png
+  return spriteUrl
+    .replace('/front_default', '/back_default')
+    .replace('/front_shiny',   '/back_shiny')
+    // fallback por si el path usa otro patrón
+    .replace('front-default', 'back-default')
+}
+
 export default function BattleScreen() {
   const { code }        = useParams<{ code: string }>()
   const [searchParams]  = useSearchParams()
@@ -28,18 +40,18 @@ export default function BattleScreen() {
   const playerName      = searchParams.get('player') ?? ''
   const roomCode        = code?.toUpperCase() ?? ''
 
-  const [battle, setBattle]         = useState<any>(null)
-  const [selectedAction, setAction] = useState<any>(null)
-  const [mode, setMode]             = useState<'move' | 'switch'>('move')
-  const [submitting, setSubmitting] = useState(false)
-  const [spriteAnim, setSpriteAnim] = useState<Record<string, string>>({})
-  const logRef = useRef<HTMLDivElement>(null)
+  const [battle, setBattle]             = useState<any>(null)
+  const [selectedAction, setAction]     = useState<any>(null)
+  const [mode, setMode]                 = useState<'move' | 'switch'>('move')
+  const [submitting, setSubmitting]     = useState(false)
+  const [spriteAnim, setSpriteAnim]     = useState<Record<string, string>>({})
+  // overlay de cambio forzado cuando el pokemon activo cae
+  const [forcedSwitch, setForcedSwitch] = useState(false)
+  const logRef          = useRef<HTMLDivElement>(null)
+  const prevActiveRef   = useRef<number | null>(null)  // trackea el activePokemonId anterior
 
-  // FIX: si no hay playerName en la URL, redirigir al home
   useEffect(() => {
-    if (!playerName) {
-      navigate('/')
-    }
+    if (!playerName) navigate('/')
   }, [playerName])
 
   useEffect(() => {
@@ -52,6 +64,24 @@ export default function BattleScreen() {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
   }, [battle?.battleLog])
 
+  // Detectar cuando mi pokémon activo cayó → mostrar overlay de cambio forzado
+  useEffect(() => {
+    if (!battle) return
+    const me = battle.players?.find((p: any) => p.name === playerName)
+    if (!me) return
+    const active = me.team?.find((p: any) => p.pokedexId === me.activePokemonId)
+    if (!active) return
+
+    // Si el activo tiene 0 HP y hay pokemones vivos → forzar switch
+    const hasAlive = me.team.some((p: any) => p.currentHp > 0 && p.pokedexId !== me.activePokemonId)
+    if (active.currentHp <= 0 && hasAlive && battle.status === 'active') {
+      setForcedSwitch(true)
+    } else {
+      // Si el servidor ya actualizó el activo (cambio ya aplicado), cerrar overlay
+      if (active.currentHp > 0) setForcedSwitch(false)
+    }
+  }, [battle])
+
   async function fetchBattle() {
     try {
       const res  = await fetch(`${API}/battle/${roomCode}`)
@@ -60,8 +90,9 @@ export default function BattleScreen() {
     } catch { /* silent */ }
   }
 
-  async function submitAction() {
-    if (!selectedAction) return
+  async function submitAction(action?: any) {
+    const actionToSend = action ?? selectedAction
+    if (!actionToSend) return
     setSubmitting(true)
     try {
       const myId = getMyPlayer()?.activePokemonId
@@ -71,7 +102,7 @@ export default function BattleScreen() {
       const res = await fetch(`${API}/battle/${roomCode}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerName, action: selectedAction }),
+        body: JSON.stringify({ playerName, action: actionToSend }),
       })
       const data = await res.json()
       if (data.log) {
@@ -80,17 +111,22 @@ export default function BattleScreen() {
         setTimeout(() => setSpriteAnim({}), 500)
       }
       setAction(null)
+      setForcedSwitch(false)
       await fetchBattle()
     } catch { /* silent */ }
     finally { setSubmitting(false) }
   }
 
-  // FIX: buscar por nombre exacto — nunca retornar undefined como "yo"
+  /** Cambio forzado: enviar inmediatamente sin esperar confirmación manual */
+  async function handleForcedSwitch(pokedexId: number) {
+    setForcedSwitch(false)
+    await submitAction({ type: 'switch', pokemonId: pokedexId })
+  }
+
   function getMyPlayer()       { return battle?.players?.find((p: any) => p.name === playerName) }
   function getOpponentPlayer() { return battle?.players?.find((p: any) => p.name !== playerName) }
   function getActive(player: any) { return player?.team?.find((p: any) => p.pokedexId === player.activePokemonId) }
 
-  // Pantalla de carga inicial
   if (!battle) {
     return (
       <div className="page">
@@ -105,37 +141,25 @@ export default function BattleScreen() {
   const oppActive    = getActive(oppPlayer)
   const isEnded      = battle.status === 'ended'
   const didWin       = battle.winnerPlayerId === playerName
-  const alreadyActed = myPlayer?.selectedAction !== null
+  const alreadyActed = myPlayer?.selectedAction !== null && !forcedSwitch
 
-  // FIX: si mi jugador no existe en la batalla, mostrar error claro
   if (!myPlayer) {
     return (
       <div className="page">
         <p style={{ color: 'var(--red)', fontFamily: 'var(--font-display)', fontSize: '10px' }}>
           ERROR: Jugador "{playerName}" no encontrado en esta batalla.
         </p>
-        <button
-          className="btn btn--ghost"
-          style={{ marginTop: '1rem' }}
-          onClick={() => navigate('/')}
-        >
-          VOLVER AL INICIO
-        </button>
+        <button className="btn btn--ghost" style={{ marginTop: '1rem' }} onClick={() => navigate('/')}>VOLVER AL INICIO</button>
       </div>
     )
   }
 
-  // FIX: si el oponente aun no ha elegido equipo, mostrar pantalla de espera
   if (!oppPlayer) {
     return (
       <div className="page">
         <div style={{ textAlign: 'center' }}>
-          <p style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)', fontSize: '10px', marginBottom: '0.75rem' }}>
-            ESPERANDO OPONENTE...
-          </p>
-          <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-            El jugador 2 aun no ha elegido su equipo. Espera un momento.
-          </p>
+          <p style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)', fontSize: '10px', marginBottom: '0.75rem' }}>ESPERANDO OPONENTE...</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>El jugador 2 aun no ha elegido su equipo. Espera un momento.</p>
         </div>
       </div>
     )
@@ -143,19 +167,42 @@ export default function BattleScreen() {
 
   if (isEnded) {
     return (
-      <div className="victory-screen anim-fade-in">
-        {didWin ? (
-          <><h1 className="victory-title">VICTORIA</h1><p>Derrotaste a {oppPlayer?.name}.</p></>
-        ) : (
-          <><h1 className="defeat-title">DERROTA</h1><p>{battle.winnerPlayerId} gano la batalla.</p></>
-        )}
-        <button className="btn btn--primary" onClick={() => window.location.href = '/'}>VOLVER AL INICIO</button>
+      <div className="victory-screen anim-fade-in" style={{ position: 'relative' }}>
+        <PixelBg blur={false} />
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
+          {didWin ? (
+            <><h1 className="victory-title">VICTORIA</h1><p>Derrotaste a {oppPlayer?.name}.</p></>
+          ) : (
+            <><h1 className="defeat-title">DERROTA</h1><p>{battle.winnerPlayerId} gano la batalla.</p></>
+          )}
+          <button className="btn btn--primary" onClick={() => window.location.href = '/'}>VOLVER AL INICIO</button>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="battle-screen">
+      {/* Fondo igual que Shop, sin blur */}
+      <PixelBg blur={false} />
+
+      {/* Overlay de cambio forzado */}
+      {forcedSwitch && (
+        <div className="forced-switch-overlay">
+          <h2>¡TU POKÉMON FUE DEBILITADO! ELIGE EL SIGUIENTE</h2>
+          <div className="forced-switch-grid">
+            {(myPlayer?.team ?? []).filter((p: any) => p.currentHp > 0 && p.pokedexId !== myPlayer.activePokemonId).map((p: any) => (
+              <div key={p.pokedexId} className="forced-switch-card" onClick={() => handleForcedSwitch(p.pokedexId)}>
+                <img src={p.spriteUrl} alt={p.name} style={{ width: 64, height: 64, imageRendering: 'pixelated' }} />
+                <span>{p.name}</span>
+                <small>{p.currentHp}/{p.maxHp} HP</small>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Top bar */}
       <div className="battle-topbar">
         <span style={{ fontFamily: 'var(--font-display)', fontSize: '8px', color: 'var(--text-muted)' }}>
           TURNO <span style={{ color: 'var(--accent)' }}>{battle.turn}</span>
@@ -168,31 +215,61 @@ export default function BattleScreen() {
         </span>
       </div>
 
+      {/* Arena: oponente arriba (pequeño/lejos), jugador abajo (grande/cerca) */}
       <div className="battle-arena">
-        {[{ player: oppPlayer, active: oppActive, isOpp: true }, { player: myPlayer, active: myActive, isOpp: false }].map(({ player, active, isOpp }) => (
-          <div key={player?.name} className={`pokemon-slot ${isOpp ? '' : 'pokemon-slot--active'} ${active?.currentHp <= 0 ? 'pokemon-slot--fainted' : ''}`}>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '7px', color: isOpp ? 'var(--text-muted)' : 'var(--accent)', alignSelf: 'flex-start' }}>
-              {isOpp ? 'OPONENTE' : 'TU POKEMON'}
-            </span>
+        {/* Oponente — arriba, sprite frontal, tarjeta más pequeña */}
+        <div className="battle-arena-row--opponent">
+          <div className={`pokemon-slot ${oppActive?.currentHp <= 0 ? 'pokemon-slot--fainted' : ''}`}>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '7px', color: 'var(--text-muted)', alignSelf: 'flex-start' }}>OPONENTE</span>
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
-              {active?.types?.map((t: string) => <span key={t} className={`type-badge type-${t}`}>{t}</span>)}
+              {oppActive?.types?.map((t: string) => <span key={t} className={`type-badge type-${t}`}>{t}</span>)}
             </div>
-            <img src={active?.spriteUrl} alt={active?.name}
-              className={`pokemon-sprite ${isOpp ? 'pokemon-sprite--opponent' : ''} ${spriteAnim[active?.pokedexId] ?? ''}`}
+            {/* Sprite frontal del oponente */}
+            <img
+              src={oppActive?.spriteUrl}
+              alt={oppActive?.name}
+              className={`pokemon-sprite--opponent ${spriteAnim[oppActive?.pokedexId] ?? ''}`}
             />
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '8px', textTransform: 'capitalize', color: 'var(--text)' }}>{active?.name}</span>
-            {active?.status && (
-              <span className={`status-badge status-${active.status.name}`}>{active.status.name.toUpperCase()} ({active.status.remainingTurns}T)</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '8px', textTransform: 'capitalize', color: 'var(--text)' }}>{oppActive?.name}</span>
+            {oppActive?.status && (
+              <span className={`status-badge status-${oppActive.status.name}`}>{oppActive.status.name.toUpperCase()} ({oppActive.status.remainingTurns}T)</span>
             )}
-            <div className="pokemon-hp-label">HP {active?.currentHp ?? 0} / {active?.maxHp ?? 0}</div>
-            <div className="hp-bar-wrap" style={{ width: '100%' }}>
-              <div className={`hp-bar ${hpColorClass(active?.currentHp ?? 0, active?.maxHp ?? 1)}`}
-                style={{ width: `${Math.max(0, (active?.currentHp / active?.maxHp) * 100)}%` }} />
+            <div className="pokemon-hp-label">HP {oppActive?.currentHp ?? 0} / {oppActive?.maxHp ?? 0}</div>
+            <div className="hp-bar-wrap">
+              <div className={`hp-bar ${hpColorClass(oppActive?.currentHp ?? 0, oppActive?.maxHp ?? 1)}`}
+                style={{ width: `${Math.max(0, (oppActive?.currentHp / oppActive?.maxHp) * 100)}%` }} />
             </div>
           </div>
-        ))}
+        </div>
+
+        {/* Jugador — abajo, sprite de espalda, tarjeta más grande */}
+        <div className="battle-arena-row--player">
+          <div className={`pokemon-slot pokemon-slot--mine ${myActive?.currentHp <= 0 ? 'pokemon-slot--fainted' : ''}`}>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '7px', color: 'var(--accent)', alignSelf: 'flex-start' }}>TU POKÉMON</span>
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {myActive?.types?.map((t: string) => <span key={t} className={`type-badge type-${t}`}>{t}</span>)}
+            </div>
+            {/* Sprite de ESPALDA para el jugador */}
+            <img
+              src={backSprite(myActive?.spriteUrl ?? '')}
+              alt={myActive?.name}
+              className={`pokemon-sprite--mine ${spriteAnim[myActive?.pokedexId] ?? ''}`}
+              onError={(e) => { (e.target as HTMLImageElement).src = myActive?.spriteUrl ?? '' }}
+            />
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '8px', textTransform: 'capitalize', color: 'var(--text)' }}>{myActive?.name}</span>
+            {myActive?.status && (
+              <span className={`status-badge status-${myActive.status.name}`}>{myActive.status.name.toUpperCase()} ({myActive.status.remainingTurns}T)</span>
+            )}
+            <div className="pokemon-hp-label">HP {myActive?.currentHp ?? 0} / {myActive?.maxHp ?? 0}</div>
+            <div className="hp-bar-wrap">
+              <div className={`hp-bar ${hpColorClass(myActive?.currentHp ?? 0, myActive?.maxHp ?? 1)}`}
+                style={{ width: `${Math.max(0, (myActive?.currentHp / myActive?.maxHp) * 100)}%` }} />
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Panel inferior de acciones */}
       <div className="battle-bottom">
         <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '0.5rem', marginBottom: '0.25rem' }}>
           {(['move', 'switch'] as const).map((m) => (
@@ -204,7 +281,7 @@ export default function BattleScreen() {
           ))}
           {selectedAction && (
             <button className="btn btn--primary" style={{ marginLeft: 'auto', fontSize: '7px', padding: '0.4rem 0.8rem' }}
-              onClick={submitAction} disabled={submitting || alreadyActed}
+              onClick={() => submitAction()} disabled={submitting || alreadyActed}
             >
               {submitting ? 'ENVIANDO...' : alreadyActed ? 'ENVIADO' : 'CONFIRMAR'}
             </button>

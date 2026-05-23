@@ -25,7 +25,22 @@ function coinFlip(): number {
   return Math.random() < 0.5 ? 0 : 1
 }
 
-// Determinar orden de acción entre dos jugadores
+/**
+ * Auto-switch: si el pokemon activo cayo, elige automaticamente
+ * el primer pokemon vivo del equipo (el jugador no puede quedar sin activo).
+ * Esto previene el bug de pantalla bloqueada.
+ */
+function autoSwitchIfFainted(player: PlayerState, log: string[]) {
+  const active = getActive(player)
+  if (active && active.currentHp <= 0) {
+    const next = player.team.find((p) => p.pokedexId !== player.activePokemonId && p.currentHp > 0)
+    if (next) {
+      player.activePokemonId = next.pokedexId
+      log.push(`[auto] ${player.name} envio a ${next.name}.`)
+    }
+  }
+}
+
 async function resolveOrder(
   players: PlayerState[],
   moves: (any | null)[]
@@ -73,9 +88,11 @@ export async function resolveTurn(roomCode: string): Promise<string[]> {
     const attacker = players[idx]
     const defender = players[idx === 0 ? 1 : 0]
     const action   = attacker.selectedAction!
-    const activePokemon = getActive(attacker)
 
-    if (activePokemon.currentHp <= 0) continue // ya debilitado
+    // Si el activo ya estaba debilitado antes de actuar, auto-switch primero
+    autoSwitchIfFainted(attacker, log)
+    const activePokemon = getActive(attacker)
+    if (!activePokemon || activePokemon.currentHp <= 0) continue
 
     // --- SWITCH ---
     if (action.type === 'switch' && action.pokemonId) {
@@ -83,7 +100,7 @@ export async function resolveTurn(roomCode: string): Promise<string[]> {
       if (next) {
         clearStatusOnSwitch(activePokemon)
         attacker.activePokemonId = next.pokedexId
-        log.push(`${attacker.name} switchó a ${next.name}.`)
+        log.push(`${attacker.name} cambi\u00f3 a ${next.name}.`)
       }
       continue
     }
@@ -92,11 +109,10 @@ export async function resolveTurn(roomCode: string): Promise<string[]> {
     const move = moveData[idx]
     if (!move) continue
 
-    // Precisión
     const accuracy = move.accuracy ?? 100
     const hit = Math.floor(Math.random() * 100) + 1 <= accuracy
     if (!hit) {
-      log.push(`${activePokemon.name} usó ${move.name}. ¡Falló!`)
+      log.push(`${activePokemon.name} us\u00f3 ${move.name}. \u00a1Fall\u00f3!`)
       continue
     }
 
@@ -105,14 +121,13 @@ export async function resolveTurn(roomCode: string): Promise<string[]> {
 
     defActive.currentHp = Math.max(0, defActive.currentHp - damage)
 
-    let msg = `${activePokemon.name} usó ${move.name} contra ${defActive.name} (-${damage} HP).`
-    if (isCritical)              msg += ' ¡Golpe crítico!'
-    if (effectiveness === 'super')    msg += ' ¡Es super efectivo!'
+    let msg = `${activePokemon.name} us\u00f3 ${move.name} contra ${defActive.name} (-${damage} HP).`
+    if (isCritical)              msg += ' \u00a1Golpe cr\u00edtico!'
+    if (effectiveness === 'super')    msg += ' \u00a1Es super efectivo!'
     if (effectiveness === 'resisted') msg += ' No es muy efectivo...'
     if (effectiveness === 'immune')   msg += ' No tiene efecto.'
     log.push(msg)
 
-    // Aplicar efecto de estado si el move lo tiene
     if (move.damageClass !== 'status' && move.effect) {
       const effectLower = move.effect.toLowerCase()
       if (effectLower.includes('burn'))      applyStatus(defActive, 'burn')
@@ -121,17 +136,22 @@ export async function resolveTurn(roomCode: string): Promise<string[]> {
     }
 
     if (defActive.currentHp <= 0) {
-      log.push(`${defActive.name} se debilitó.`)
+      log.push(`${defActive.name} se deblit\u00f3.`)
+      // Auto-switch inmediato del defensor si tiene pokemon vivos
+      autoSwitchIfFainted(defender, log)
     }
   }
 
   // Daño pasivo por estado al final del turno
   for (const player of players) {
     const active = getActive(player)
-    if (active.currentHp <= 0) continue
+    if (!active || active.currentHp <= 0) continue
     const dmg = applyPassiveStatusDamage(active)
-    if (dmg > 0) log.push(`${active.name} sufrió ${dmg} HP de daño por estado.`)
-    if (active.currentHp <= 0) log.push(`${active.name} se debilitó por el estado.`)
+    if (dmg > 0) log.push(`${active.name} sufri\u00f3 ${dmg} HP de da\u00f1o por estado.`)
+    if (active.currentHp <= 0) {
+      log.push(`${active.name} se deblit\u00f3 por el estado.`)
+      autoSwitchIfFainted(player, log)
+    }
   }
 
   // Resetear acciones
@@ -144,11 +164,11 @@ export async function resolveTurn(roomCode: string): Promise<string[]> {
       const winner = players.find((p) => p.name !== player.name)!
       battle.status = 'ended'
       battle.winnerPlayerId = winner.name
-      log.push(`¡${winner.name} ganó la batalla!`)
+      log.push(`\u00a1${winner.name} gan\u00f3 la batalla!`)
     }
   }
 
-  // Persistir estado actualizado
+  // Persistir
   battle.turn += 1
   battle.players = players as any
   battle.battleLog.push(...log.map((message) => ({ turn: battle.turn - 1, message })))
