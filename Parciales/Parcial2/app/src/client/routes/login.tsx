@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useSignIn, useSignUp } from '@clerk/clerk-react'
+import { useSignIn, useSignUp, useAuth } from '@clerk/clerk-react'
 import { useNavigate } from 'react-router-dom'
 
 const POKEMON_SPRITES = [
@@ -151,9 +151,17 @@ export default function Login() {
   const [verifying, setVerifying] = useState(false)
   const [code, setCode] = useState('')
 
-  const { signIn } = useSignIn()
+  const { signIn, setActive: setActiveSignIn } = useSignIn()
   const { signUp, setActive } = useSignUp()
+  const { isSignedIn, isLoaded } = useAuth()
   const navigate = useNavigate()
+
+  // FIX: si ya hay sesion activa, redirigir al home automaticamente
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      navigate('/')
+    }
+  }, [isLoaded, isSignedIn])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -175,13 +183,16 @@ export default function Login() {
           password,
         })
         if (result.status === 'complete') {
-          await setActive({ session: result.createdSessionId })
-          const userId = result.userId
+          // FIX: usar setActiveSignIn para activar la sesion correctamente
+          await setActiveSignIn({ session: result.createdSessionId })
+          const userId = result.createdSessionId
+            ? (result as any).createdUserId ?? result.identifier
+            : email
           await fetch('/api/users', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              clerkId: userId,
+              clerkId: (result as any).createdUserId,
               name: name || email.split('@')[0],
               email,
             }),

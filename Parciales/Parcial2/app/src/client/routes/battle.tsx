@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import '../styles/battle.css'
 
 const API = '/api'
@@ -24,6 +24,7 @@ function logClass(msg: string) {
 export default function BattleScreen() {
   const { code }        = useParams<{ code: string }>()
   const [searchParams]  = useSearchParams()
+  const navigate        = useNavigate()
   const playerName      = searchParams.get('player') ?? ''
   const roomCode        = code?.toUpperCase() ?? ''
 
@@ -33,6 +34,13 @@ export default function BattleScreen() {
   const [submitting, setSubmitting] = useState(false)
   const [spriteAnim, setSpriteAnim] = useState<Record<string, string>>({})
   const logRef = useRef<HTMLDivElement>(null)
+
+  // FIX: si no hay playerName en la URL, redirigir al home
+  useEffect(() => {
+    if (!playerName) {
+      navigate('/')
+    }
+  }, [playerName])
 
   useEffect(() => {
     fetchBattle()
@@ -77,10 +85,12 @@ export default function BattleScreen() {
     finally { setSubmitting(false) }
   }
 
+  // FIX: buscar por nombre exacto — nunca retornar undefined como "yo"
   function getMyPlayer()       { return battle?.players?.find((p: any) => p.name === playerName) }
   function getOpponentPlayer() { return battle?.players?.find((p: any) => p.name !== playerName) }
   function getActive(player: any) { return player?.team?.find((p: any) => p.pokedexId === player.activePokemonId) }
 
+  // Pantalla de carga inicial
   if (!battle) {
     return (
       <div className="page">
@@ -96,6 +106,40 @@ export default function BattleScreen() {
   const isEnded      = battle.status === 'ended'
   const didWin       = battle.winnerPlayerId === playerName
   const alreadyActed = myPlayer?.selectedAction !== null
+
+  // FIX: si mi jugador no existe en la batalla, mostrar error claro
+  if (!myPlayer) {
+    return (
+      <div className="page">
+        <p style={{ color: 'var(--red)', fontFamily: 'var(--font-display)', fontSize: '10px' }}>
+          ERROR: Jugador "{playerName}" no encontrado en esta batalla.
+        </p>
+        <button
+          className="btn btn--ghost"
+          style={{ marginTop: '1rem' }}
+          onClick={() => navigate('/')}
+        >
+          VOLVER AL INICIO
+        </button>
+      </div>
+    )
+  }
+
+  // FIX: si el oponente aun no ha elegido equipo, mostrar pantalla de espera
+  if (!oppPlayer) {
+    return (
+      <div className="page">
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)', fontSize: '10px', marginBottom: '0.75rem' }}>
+            ESPERANDO OPONENTE...
+          </p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+            El jugador 2 aun no ha elegido su equipo. Espera un momento.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   if (isEnded) {
     return (
