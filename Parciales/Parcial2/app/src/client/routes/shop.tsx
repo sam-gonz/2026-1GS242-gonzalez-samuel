@@ -33,44 +33,39 @@ export default function Shop() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  const [pokemon, setPokemon] = useState<Pokemon[]>([])
+  const [pokemon, setPokemon]           = useState<Pokemon[]>([])
   const [ownedShinies, setOwnedShinies] = useState<number[]>([])
   const [purchasedPacks, setPurchasedPacks] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [buyingId, setBuyingId] = useState<number | string | null>(null)
+  const [loading, setLoading]           = useState(true)
+  const [buyingId, setBuyingId]         = useState<number | string | null>(null)
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>('all')
   const [showCanceled, setShowCanceled] = useState(false)
-  const [packResults, setPackResults] = useState<Pokemon[] | null>(null)
-  const returnPath = useRef<string>('/')
+  const [packResults, setPackResults]   = useState<Pokemon[] | null>(null)
+  const returnPath        = useRef<string>('/')
   const hasHandledSuccess = useRef(false)
 
+  // ─ Detectar ruta de retorno ──────────────────────────────────────────────────
   useEffect(() => {
-    // Intentar leer ?from= param primero (el mas confiable)
     const fromParam = searchParams.get('from')
-    if (fromParam) {
-      returnPath.current = fromParam
-      return
-    }
-    // Fallback: document.referrer si es de nuestro mismo host y no es stripe ni shop
+    if (fromParam) { returnPath.current = fromParam; return }
     const ref = document.referrer
     if (ref && !ref.includes('stripe.com') && !ref.includes('/shop')) {
       try {
         const url = new URL(ref)
-        if (url.host === window.location.host) {
-          returnPath.current = url.pathname
-        }
+        if (url.host === window.location.host) returnPath.current = url.pathname
       } catch {}
     }
   }, [])
 
   async function fetchUserShinies(userId: string) {
-    const res = await fetch(`/api/payments/user-shinies/${userId}`)
+    const res  = await fetch(`/api/payments/user-shinies/${userId}`)
     const data = await res.json()
     setOwnedShinies(data.unlockedShinies || [])
     setPurchasedPacks(data.purchasedPacks || [])
     return (data.unlockedShinies || []) as number[]
   }
 
+  // ─ Cargar datos iniciales y manejar retorno de Stripe ────────────────────
   useEffect(() => {
     if (!isLoaded) return
     if (!isSignedIn) { navigate('/login'); return }
@@ -83,19 +78,43 @@ export default function Shop() {
 
         const isSuccess  = searchParams.get('success') === 'true'
         const idsParam   = searchParams.get('ids')
+        const packId     = searchParams.get('packId')
+        const ckParam    = searchParams.get('ck')   // clerkId pasado en success_url
         const isCanceled = searchParams.get('canceled') === 'true'
 
-        const [pokemonRes] = await Promise.all([fetch('/api/shiny?limit=150')])
+        const pokemonRes  = await fetch('/api/shiny?limit=150')
         const pokemonData = await pokemonRes.json()
         const allPokemon: Pokemon[] = pokemonData.data || []
         setPokemon(allPokemon)
+
+        // ─ Confirmar compra con el servidor (fallback al webhook) ───────────
+        if (isSuccess && idsParam && !hasHandledSuccess.current) {
+          hasHandledSuccess.current = true
+          const clerkIdToUse = ckParam || userId
+          try {
+            await fetch('/api/payments/confirm-purchase', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                clerkId:   clerkIdToUse,
+                pokedexIds: idsParam,
+                ...(packId ? { packId } : {}),
+              }),
+            })
+          } catch (e) {
+            console.error('confirm-purchase fallo:', e)
+          }
+        }
+
+        // Recargar shinies (ya confirmados)
         await fetchUserShinies(userId)
 
-        if ((isSuccess || isCanceled) && !hasHandledSuccess.current) {
-          hasHandledSuccess.current = true
+        // Limpiar params de Stripe de la URL
+        if (isSuccess || isCanceled) {
           navigate('/shop', { replace: true })
         }
 
+        // Mostrar animación o mensaje
         if (isSuccess && idsParam) {
           const ids = idsParam.split(',').map(Number).filter(Boolean)
           const newPokemon = ids
@@ -116,15 +135,13 @@ export default function Shop() {
     fetchData()
   }, [isLoaded, isSignedIn])
 
-  function handleGoBack() {
-    navigate(returnPath.current)
-  }
+  function handleGoBack() { navigate(returnPath.current) }
 
   async function handleBuy(pokedexId: number) {
     if (!user) return
     setBuyingId(pokedexId)
     try {
-      const res = await fetch('/api/payments/create-checkout', {
+      const res  = await fetch('/api/payments/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clerkId: user.id, pokedexId }),
@@ -143,7 +160,7 @@ export default function Shop() {
     if (!user) return
     setBuyingId(packId)
     try {
-      const res = await fetch('/api/payments/create-checkout', {
+      const res  = await fetch('/api/payments/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clerkId: user.id, packId }),
@@ -185,6 +202,8 @@ export default function Shop() {
       )}
 
       <div style={{ position: 'relative', zIndex: 1, maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+
+        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <button
@@ -200,6 +219,8 @@ export default function Shop() {
               color: 'var(--accent)', marginBottom: '0', textShadow: '0 0 20px rgba(255,215,0,0.4)',
             }}>TIENDA SHINY</h1>
           </div>
+
+          {/* Filtros rarity */}
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             {RARITY_ORDER.map((r) => (
               <button key={r} onClick={() => setRarityFilter(r)} style={{
@@ -220,6 +241,7 @@ export default function Shop() {
           </div>
         </div>
 
+        {/* Cancelado */}
         {showCanceled && (
           <div style={{
             background: 'rgba(239,68,68,0.1)', border: '1px solid #ef4444', borderRadius: '8px',
@@ -230,6 +252,7 @@ export default function Shop() {
           </div>
         )}
 
+        {/* Packs */}
         <div style={{ background: 'rgba(16,16,26,0.8)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem' }}>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '10px', color: 'var(--accent)', marginBottom: '1rem', letterSpacing: '0.1em' }}>PACKS ESPECIALES</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
@@ -237,7 +260,8 @@ export default function Shop() {
               <div key={pack.id} style={{
                 background: 'rgba(20,20,31,0.9)',
                 border: `1px solid ${purchasedPacks.includes(pack.id) ? '#22c55e' : 'var(--border)'}`,
-                borderRadius: '8px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem',
+                borderRadius: '8px', padding: '1.25rem',
+                display: 'flex', flexDirection: 'column', gap: '0.75rem',
                 boxShadow: purchasedPacks.includes(pack.id) ? '0 0 20px rgba(34,197,94,0.2)' : 'none',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -265,6 +289,7 @@ export default function Shop() {
           </div>
         </div>
 
+        {/* Grid de pokemon */}
         <div>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '10px', color: 'var(--accent)', marginBottom: '1rem', letterSpacing: '0.1em' }}>
             POKEMON SHINY ({ownedShinies.length} / {pokemon.length})
