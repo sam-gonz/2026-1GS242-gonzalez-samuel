@@ -23,6 +23,7 @@ payments.post('/create-checkout', async (c) => {
       { $sample: { size: 5 } },
     ])
     const pokedexIds = shinyPool.map((s: any) => s.pokedexId)
+    const idsParam = pokedexIds.join(',')
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -40,12 +41,14 @@ payments.post('/create-checkout', async (c) => {
         },
       ],
       mode: 'payment',
-      success_url: `${origin}/shop?success=true&packId=${packId}`,
+      // Incluimos los pokedexIds en la URL para que el frontend muestre
+      // la animacion sin depender del timing del webhook
+      success_url: `${origin}/shop?success=true&packId=${packId}&ids=${idsParam}`,
       cancel_url: `${origin}/shop?canceled=true`,
       metadata: {
         clerkId,
         packId,
-        pokedexIds: pokedexIds.join(','),
+        pokedexIds: idsParam,
         type: 'pack',
       },
     })
@@ -135,9 +138,11 @@ payments.post('/webhook', async (c) => {
 
     if (type === 'pack' && packId) {
       const shinyIds = pokedexIds.split(',').map(Number).filter(Boolean)
-      const newShinies = shinyIds.filter(id => !user.unlockedShinies.includes(id))
+      const newShinies = shinyIds.filter((id: number) => !user.unlockedShinies.includes(id))
       user.unlockedShinies.push(...newShinies)
-      user.purchasedPacks.push(packId)
+      if (!user.purchasedPacks.includes(packId)) {
+        user.purchasedPacks.push(packId)
+      }
     } else if (pokedexIds) {
       const shinyId = parseInt(pokedexIds)
       if (!user.unlockedShinies.includes(shinyId)) {
