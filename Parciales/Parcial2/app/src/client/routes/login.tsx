@@ -156,7 +156,7 @@ export default function Login() {
   const { isSignedIn, isLoaded } = useAuth()
   const navigate = useNavigate()
 
-  // FIX: si ya hay sesion activa, redirigir al home automaticamente
+  // Si ya hay sesion activa, redirigir al home automaticamente
   useEffect(() => {
     if (isLoaded && isSignedIn) {
       navigate('/')
@@ -170,25 +170,28 @@ export default function Login() {
 
     try {
       if (isSignUp) {
-        await signUp.create({
+        await signUp!.create({
           emailAddress: email,
           password,
           unsafeMetadata: { name },
         })
-        await signUp.prepareEmailAddressVerification({ strategy: 'email_code' })
+        await signUp!.prepareEmailAddressVerification({ strategy: 'email_code' })
         setVerifying(true)
       } else {
-        const result = await signIn.create({
+        const result = await signIn!.create({
           identifier: email,
           password,
         })
         if (result.status === 'complete') {
-          // FIX: usar setActiveSignIn para activar la sesion correctamente
+          // FIX: verificar que setActiveSignIn exista antes de llamarlo
+          if (!setActiveSignIn) throw new Error('Clerk aun no esta listo, intenta de nuevo')
           await setActiveSignIn({ session: result.createdSessionId })
-          const userId = result.createdSessionId
-            ? (result as any).createdUserId ?? result.identifier
-            : email
-          await fetch('/api/users', {
+
+          // FIX: navegar ANTES del fetch para que el redirect no dependa del backend
+          navigate('/')
+
+          // Registrar usuario en BD sin bloquear la navegacion
+          fetch('/api/users', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -196,8 +199,9 @@ export default function Login() {
               name: name || email.split('@')[0],
               email,
             }),
-          })
-          navigate('/')
+          }).catch((err) => console.error('Error al sincronizar usuario:', err))
+        } else {
+          setError('Login incompleto, por favor intenta de nuevo')
         }
       }
     } catch (err: unknown) {
@@ -214,20 +218,27 @@ export default function Login() {
     setLoading(true)
 
     try {
-      const result = await signUp.attemptEmailAddressVerification({ code })
+      const result = await signUp!.attemptEmailAddressVerification({ code })
       if (result.status === 'complete') {
+        // FIX: verificar que setActive exista antes de llamarlo
+        if (!setActive) throw new Error('Clerk aun no esta listo, intenta de nuevo')
         await setActive({ session: result.createdSessionId })
-        const userId = result.createdUserId
-        await fetch('/api/users', {
+
+        // FIX: navegar ANTES del fetch para que el redirect no dependa del backend
+        navigate('/')
+
+        // Registrar usuario en BD sin bloquear la navegacion
+        fetch('/api/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            clerkId: userId,
+            clerkId: result.createdUserId,
             name,
             email,
           }),
-        })
-        navigate('/')
+        }).catch((err) => console.error('Error al sincronizar usuario:', err))
+      } else {
+        setError('Verificacion incompleta, intenta de nuevo')
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Verification failed'
