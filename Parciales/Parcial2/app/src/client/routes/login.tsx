@@ -195,7 +195,7 @@ export default function Login() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              clerkId: (result as any).createdUserId,
+              clerkId: result.userId,
               name: name || email.split('@')[0],
               email,
             }),
@@ -232,8 +232,8 @@ export default function Login() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            clerkId: result.createdUserId,
-            name,
+            clerkId: result.userId,
+            name: name || email.split('@')[0],
             email,
           }),
         }).catch((err) => console.error('Error al sincronizar usuario:', err))

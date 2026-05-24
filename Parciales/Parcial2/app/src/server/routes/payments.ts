@@ -89,28 +89,20 @@ payments.post('/confirm-purchase', async (c) => {
     return c.json({ error: 'clerkId y pokedexIds requeridos' }, 400)
   }
 
-  const user = await User.findOne({ clerkId })
-  if (!user) {
-    console.error('[payments] confirm-purchase: usuario no encontrado para clerkId:', clerkId)
-    // Intentar buscar por id alternativo por si el formato difiere
-    const allUsers = await User.find({}).limit(5).select('clerkId')
-    console.error('[payments] Muestra de clerkIds en BD:', allUsers.map((u: any) => u.clerkId))
-    return c.json({ error: 'Usuario no encontrado' }, 404)
-  }
-
   const ids: number[] = String(pokedexIds).split(',').map(Number).filter(Boolean)
   console.log('[payments] IDs a entregar:', ids)
 
-  const newShinies = ids.filter((id) => !user.unlockedShinies.includes(id))
-  user.unlockedShinies.push(...newShinies)
+  const updatedUser = await User.findOneAndUpdate(
+    { clerkId },
+    {
+      $addToSet: { unlockedShinies: { $each: ids } },
+      ...(packId ? { $addToSet: { purchasedPacks: packId } } : {}),
+    },
+    { upsert: true, new: true }
+  )
 
-  if (packId && !user.purchasedPacks.includes(packId)) {
-    user.purchasedPacks.push(packId)
-  }
-
-  await user.save()
-  console.log(`[payments] ✅ Entregados ${newShinies.length} shinies a ${clerkId}. Total ahora: ${user.unlockedShinies.length}`)
-  return c.json({ ok: true, added: newShinies.length, total: user.unlockedShinies.length })
+  console.log(`[payments] ✅ Entregados ${ids.length} shinies a ${clerkId}. Total ahora: ${updatedUser?.unlockedShinies.length ?? 0}`)
+  return c.json({ ok: true, added: ids.length, total: updatedUser?.unlockedShinies.length ?? 0 })
 })
 
 // ─── Obtener shinies del usuario ──────────────────────────────────────────────
@@ -144,23 +136,13 @@ payments.post('/webhook', async (c) => {
 
     if (!clerkId) return c.json({ error: 'No clerkId' }, 400)
 
-    const user = await User.findOne({ clerkId })
-    if (!user) {
-      console.error('[payments] webhook: usuario no encontrado:', clerkId)
-      return c.json({ error: 'User not found' }, 404)
+    const ids: number[] = pokedexIds.split(',').map(Number).filter(Boolean)
+    const update: any = {
+      $addToSet: { unlockedShinies: { $each: ids } }
     }
+    if (packId) update.$addToSet.purchasedPacks = packId
 
-    if (type === 'pack' && packId) {
-      const ids = pokedexIds.split(',').map(Number).filter(Boolean)
-      const newShinies = ids.filter((id: number) => !user.unlockedShinies.includes(id))
-      user.unlockedShinies.push(...newShinies)
-      if (!user.purchasedPacks.includes(packId)) user.purchasedPacks.push(packId)
-    } else if (pokedexIds) {
-      const id = parseInt(pokedexIds)
-      if (!user.unlockedShinies.includes(id)) user.unlockedShinies.push(id)
-    }
-
-    await user.save()
+    await User.findOneAndUpdate({ clerkId }, update)
     console.log(`[payments] webhook ✅ Shinies entregados a ${clerkId}`)
   }
 
