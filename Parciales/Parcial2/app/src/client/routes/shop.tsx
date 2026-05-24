@@ -21,10 +21,10 @@ const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary'] as cons
 const PACKS = [
   {
     id: 'shiny-pack-5',
-    name: 'Shiny Pack (5 Pok\u00e9mon)',
+    name: 'Shiny Pack (5 Pokémon)',
     description: '5 Random Shinies guaranteed',
     price: 499,
-    icon: '\u2728',
+    icon: '✨',
   },
 ]
 
@@ -33,124 +33,145 @@ export default function Shop() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  const [pokemon, setPokemon]           = useState<Pokemon[]>([])
-  const [ownedShinies, setOwnedShinies] = useState<number[]>([])
+  const [pokemon, setPokemon]               = useState<Pokemon[]>([])
+  const [ownedShinies, setOwnedShinies]     = useState<number[]>([])
   const [purchasedPacks, setPurchasedPacks] = useState<string[]>([])
-  const [loading, setLoading]           = useState(true)
-  const [buyingId, setBuyingId]         = useState<number | string | null>(null)
-  const [rarityFilter, setRarityFilter] = useState<RarityFilter>('all')
-  const [showCanceled, setShowCanceled] = useState(false)
-  const [packResults, setPackResults]   = useState<Pokemon[] | null>(null)
-  const returnPath        = useRef<string>('/')
-  const hasHandledSuccess = useRef(false)
+  const [loading, setLoading]               = useState(true)
+  const [buyingId, setBuyingId]             = useState<number | string | null>(null)
+  const [buyError, setBuyError]             = useState<string | null>(null)
+  const [rarityFilter, setRarityFilter]     = useState<RarityFilter>('all')
+  const [showCanceled, setShowCanceled]     = useState(false)
+  const [packResults, setPackResults]       = useState<Pokemon[] | null>(null)
+  const hasHandledSuccess                   = useRef(false)
 
-  // ─ Detectar ruta de retorno ──────────────────────────────────────────────────
-  useEffect(() => {
-    const fromParam = searchParams.get('from')
-    if (fromParam) { returnPath.current = fromParam; return }
-    const ref = document.referrer
-    if (ref && !ref.includes('stripe.com') && !ref.includes('/shop')) {
-      try {
-        const url = new URL(ref)
-        if (url.host === window.location.host) returnPath.current = url.pathname
-      } catch {}
-    }
-  }, [])
-
-  async function fetchUserShinies(userId: string) {
-    const res  = await fetch(`/api/payments/user-shinies/${userId}`)
-    const data = await res.json()
-    setOwnedShinies(data.unlockedShinies || [])
-    setPurchasedPacks(data.purchasedPacks || [])
-    return (data.unlockedShinies || []) as number[]
-  }
-
-  // ─ Cargar datos iniciales y manejar retorno de Stripe ────────────────────
+  // ─── Effect #1: cargar pokémones + shinies del usuario ───────────────────────
   useEffect(() => {
     if (!isLoaded) return
     if (!isSignedIn) { navigate('/login'); return }
 
-    async function fetchData() {
+    async function loadInitialData() {
       setLoading(true)
       try {
-        const userId = user?.id
-        if (!userId) { setLoading(false); return }
-
-        const isSuccess  = searchParams.get('success') === 'true'
-        const idsParam   = searchParams.get('ids')
-        const packId     = searchParams.get('packId')
-        const ckParam    = searchParams.get('ck')   // clerkId pasado en success_url
-        const isCanceled = searchParams.get('canceled') === 'true'
-
-        const pokemonRes  = await fetch('/api/shiny?limit=150')
+        const [pokemonRes] = await Promise.all([
+          fetch('/api/shiny?limit=150'),
+        ])
         const pokemonData = await pokemonRes.json()
-        const allPokemon: Pokemon[] = pokemonData.data || []
-        setPokemon(allPokemon)
+        setPokemon(pokemonData.data || [])
 
-        // ─ Confirmar compra con el servidor (fallback al webhook) ───────────
-        if (isSuccess && idsParam && !hasHandledSuccess.current) {
-          hasHandledSuccess.current = true
-          const clerkIdToUse = ckParam || userId
-          try {
-            await fetch('/api/payments/confirm-purchase', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                clerkId:   clerkIdToUse,
-                pokedexIds: idsParam,
-                ...(packId ? { packId } : {}),
-              }),
-            })
-          } catch (e) {
-            console.error('confirm-purchase fallo:', e)
-          }
-        }
-
-        // Recargar shinies (ya confirmados)
-        await fetchUserShinies(userId)
-
-        // Limpiar params de Stripe de la URL
-        if (isSuccess || isCanceled) {
-          navigate('/shop', { replace: true })
-        }
-
-        // Mostrar animación o mensaje
-        if (isSuccess && idsParam) {
-          const ids = idsParam.split(',').map(Number).filter(Boolean)
-          const newPokemon = ids
-            .map(id => allPokemon.find(p => p.pokedexId === id))
-            .filter(Boolean) as Pokemon[]
-          if (newPokemon.length > 0) setPackResults(newPokemon.slice(0, 5))
-        } else if (isCanceled) {
-          setShowCanceled(true)
-          setTimeout(() => setShowCanceled(false), 4000)
-        }
+        if (user?.id) await fetchUserShinies(user.id)
       } catch (err) {
-        console.error('Failed to load shop data:', err)
+        console.error('[shop] Error cargando datos iniciales:', err)
       } finally {
         setLoading(false)
       }
     }
 
-    fetchData()
+    loadInitialData()
   }, [isLoaded, isSignedIn])
 
-  function handleGoBack() { navigate(returnPath.current) }
+  // ─── Effect #2: manejar retorno de Stripe (separado para que se ejecute
+  //               incluso si isLoaded/isSignedIn ya eran true antes del redirect) ─
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !user?.id) return
+
+    const isSuccess  = searchParams.get('success') === 'true'
+    const isCanceled = searchParams.get('canceled') === 'true'
+    const idsParam   = searchParams.get('ids')
+    const packId     = searchParams.get('packId')
+    const ckParam    = searchParams.get('ck')
+
+    // Cancelado
+    if (isCanceled) {
+      setShowCanceled(true)
+      setTimeout(() => setShowCanceled(false), 4000)
+      navigate('/shop', { replace: true })
+      return
+    }
+
+    // Éxito — solo procesar una vez
+    if (!isSuccess || !idsParam || hasHandledSuccess.current) return
+    hasHandledSuccess.current = true
+
+    const clerkIdToUse = ckParam || user.id
+
+    async function handleStripeSuccess() {
+      try {
+        console.log('[shop] Confirmando compra:', { clerkIdToUse, idsParam, packId })
+
+        const res = await fetch('/api/payments/confirm-purchase', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clerkId: clerkIdToUse,
+            pokedexIds: idsParam,
+            ...(packId ? { packId } : {}),
+          }),
+        })
+        const result = await res.json()
+        console.log('[shop] confirm-purchase resultado:', result)
+      } catch (e) {
+        console.error('[shop] confirm-purchase falló:', e)
+      }
+
+      // Recargar shinies actualizados desde la BD
+      const latest = await fetchUserShinies(user!.id)
+
+      // Preparar modal con los pokémones comprados
+      const ids = idsParam!.split(',').map(Number).filter(Boolean)
+      setPokemon((allPokemon) => {
+        const bought = ids
+          .map((id) => allPokemon.find((p) => p.pokedexId === id))
+          .filter(Boolean) as Pokemon[]
+        if (bought.length > 0) setPackResults(bought.slice(0, 5))
+        return allPokemon
+      })
+
+      // Limpiar URL al final para no perder params antes de procesar
+      setTimeout(() => navigate('/shop', { replace: true }), 200)
+    }
+
+    handleStripeSuccess()
+  }, [isLoaded, isSignedIn, searchParams, user?.id])
+
+  async function fetchUserShinies(userId: string) {
+    try {
+      const res  = await fetch(`/api/payments/user-shinies/${userId}`)
+      const data = await res.json()
+      setOwnedShinies(data.unlockedShinies || [])
+      setPurchasedPacks(data.purchasedPacks || [])
+      return (data.unlockedShinies || []) as number[]
+    } catch (e) {
+      console.error('[shop] Error cargando shinies del usuario:', e)
+      return [] as number[]
+    }
+  }
 
   async function handleBuy(pokedexId: number) {
     if (!user) return
     setBuyingId(pokedexId)
+    setBuyError(null)
     try {
+      console.log('[shop] Comprando pokémon individual:', pokedexId)
       const res  = await fetch('/api/payments/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clerkId: user.id, pokedexId }),
       })
       const data = await res.json()
-      if (data.sessionUrl) window.location.href = data.sessionUrl
-      else alert('Error creating checkout session')
+      console.log('[shop] create-checkout respuesta:', data)
+
+      if (data.sessionUrl) {
+        window.location.href = data.sessionUrl
+      } else {
+        const msg = data.error || 'No se pudo crear la sesión de pago'
+        console.error('[shop] Error en checkout:', msg)
+        setBuyError(msg)
+        setTimeout(() => setBuyError(null), 5000)
+      }
     } catch (err) {
-      console.error('Purchase failed:', err)
+      console.error('[shop] Error de red en handleBuy:', err)
+      setBuyError('Error de conexión. Intenta de nuevo.')
+      setTimeout(() => setBuyError(null), 5000)
     } finally {
       setBuyingId(null)
     }
@@ -159,16 +180,28 @@ export default function Shop() {
   async function handleBuyPack(packId: string) {
     if (!user) return
     setBuyingId(packId)
+    setBuyError(null)
     try {
+      console.log('[shop] Comprando pack:', packId)
       const res  = await fetch('/api/payments/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clerkId: user.id, packId }),
       })
       const data = await res.json()
-      if (data.sessionUrl) window.location.href = data.sessionUrl
+      console.log('[shop] create-checkout pack respuesta:', data)
+
+      if (data.sessionUrl) {
+        window.location.href = data.sessionUrl
+      } else {
+        const msg = data.error || 'No se pudo crear la sesión de pago'
+        setBuyError(msg)
+        setTimeout(() => setBuyError(null), 5000)
+      }
     } catch (err) {
-      console.error('Purchase failed:', err)
+      console.error('[shop] Error de red en handleBuyPack:', err)
+      setBuyError('Error de conexión. Intenta de nuevo.')
+      setTimeout(() => setBuyError(null), 5000)
     } finally {
       setBuyingId(null)
     }
@@ -207,13 +240,13 @@ export default function Shop() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <button
-              onClick={handleGoBack}
+              onClick={() => navigate('/')}
               style={{
                 fontFamily: 'var(--font-display)', fontSize: '8px', color: 'var(--text-muted)',
                 background: 'none', border: '1px solid var(--border)', borderRadius: '4px',
                 padding: '0.5rem 0.75rem', cursor: 'pointer', letterSpacing: '0.06em',
               }}
-            >\u2190 VOLVER</button>
+            >← VOLVER</button>
             <h1 style={{
               fontFamily: 'var(--font-display)', fontSize: 'clamp(12px, 2vw, 18px)',
               color: 'var(--accent)', marginBottom: '0', textShadow: '0 0 20px rgba(255,215,0,0.4)',
@@ -241,13 +274,24 @@ export default function Shop() {
           </div>
         </div>
 
+        {/* Error banner */}
+        {buyError && (
+          <div style={{
+            background: 'rgba(239,68,68,0.1)', border: '1px solid #ef4444', borderRadius: '8px',
+            padding: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem',
+          }}>
+            <span style={{ fontSize: '20px' }}>⚠️</span>
+            <p style={{ color: '#ef4444', fontSize: '12px', fontFamily: 'var(--font-display)' }}>{buyError}</p>
+          </div>
+        )}
+
         {/* Cancelado */}
         {showCanceled && (
           <div style={{
             background: 'rgba(239,68,68,0.1)', border: '1px solid #ef4444', borderRadius: '8px',
             padding: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem',
           }}>
-            <span style={{ fontSize: '20px' }}>\u274c</span>
+            <span style={{ fontSize: '20px' }}>❌</span>
             <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Compra cancelada. Puedes intentar de nuevo cuando quieras.</p>
           </div>
         )}
