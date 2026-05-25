@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagrama de Casos de Uso — Debida Diligencia Anticorrupción</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:            #0a0d14;
+    --surface:       #111520;
+    --surface-2:     #161c2e;
+    --border:        #1e2a42;
+    --text:          #dde4f0;
+    --text-muted:    #8896b0;
+    --text-faint:    #3d4f6e;
+
+    --teal:          #0e8a96;
+    --teal-dark:     #072f35;
+    --teal-glow:     rgba(14,138,150,0.4);
+    --teal-label:    #72f0fd;
+
+    --green:         #0e9a55;
+    --green-dark:    #062819;
+    --green-glow:    rgba(14,154,85,0.4);
+    --green-label:   #5ef0a0;
+
+    --purple:        #6040c8;
+    --purple-dark:   #130d38;
+    --purple-glow:   rgba(96,64,200,0.4);
+    --purple-label:  #c4b5fd;
+
+    --gold:          #b86a0a;
+    --gold-dark:     #2a1600;
+    --gold-glow:     rgba(184,106,10,0.45);
+    --gold-label:    #fcd5a0;
+
+    --actor-stroke:  #4a7fa8;
+    --actor-fill:    #0a1828;
+    --actor-glow:    rgba(74,127,168,0.3);
+
+    --conn:          rgba(74,127,168,0.55);
+    --conn-dashed:   rgba(148,163,184,0.4);
+  }
+
+  html, body {
+    width: 100%;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2.5rem 1.5rem 4rem;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+  .header h1 {
+    font-size: clamp(1rem, 2.2vw, 1.45rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .header p {
+    margin-top: 0.35rem;
+    font-size: 0.82rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* ── DIAGRAM ── */
+  .diagram-wrap {
+    width: 100%;
+    max-width: 1120px;
+  }
+
+  svg.ucd {
+    width: 100%;
+    height: auto;
+    display: block;
+    overflow: visible;
+  }
+
+  /* ── LEGEND ── */
+  .legend {
+    margin-top: 1.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 2rem;
+    justify-content: center;
+    padding: 0.9rem 2rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+  .legend-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .legend-line {
+    width: 28px; height: 2px;
+    background: repeating-linear-gradient(90deg, var(--text-muted) 0 5px, transparent 5px 9px);
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Sistema de Debida Diligencia Anticorrupción para Terceros</h1>
+  <p>Diagrama de Casos de Uso</p>
+</div>
+
+<div class="diagram-wrap">
+<!--
+  ViewBox: 0 0 1060 820
+  Layout:
+    Actors left:  Proveedor(x=72), DataEntry(x=72), Cumplimiento(x=72)
+    Actors right: Restrictivas(x=988), Gerencia(x=988)
+    System box:   x=155 y=50 w=750 h=720
+    Use cases inside system box, grouped by row
+-->
+<svg class="ucd" viewBox="0 0 1060 820" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="Diagrama de casos de uso — Sistema de Debida Diligencia Anticorrupción">
+<defs>
+
+  <!-- Background dot grid -->
+  <pattern id="dots" x="0" y="0" width="32" height="32" patternUnits="userSpaceOnUse">
+    <circle cx="1" cy="1" r="1" fill="#1a2236"/>
+  </pattern>
+
+  <!-- Glow filters -->
+  <filter id="f-teal" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="b"/>
+    <feFlood flood-color="#0e8a96" flood-opacity="0.55" result="c"/>
+    <feComposite in="c" in2="b" operator="in" result="s"/>
+    <feMerge><feMergeNode in="s"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="f-green" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="b"/>
+    <feFlood flood-color="#0e9a55" flood-opacity="0.55" result="c"/>
+    <feComposite in="c" in2="b" operator="in" result="s"/>
+    <feMerge><feMergeNode in="s"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="f-purple" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="b"/>
+    <feFlood flood-color="#6040c8" flood-opacity="0.55" result="c"/>
+    <feComposite in="c" in2="b" operator="in" result="s"/>
+    <feMerge><feMergeNode in="s"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="f-gold" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="b"/>
+    <feFlood flood-color="#c07820" flood-opacity="0.6" result="c"/>
+    <feComposite in="c" in2="b" operator="in" result="s"/>
+    <feMerge><feMergeNode in="s"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="f-actor" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="8" result="b"/>
+    <feFlood flood-color="#4a7fa8" flood-opacity="0.25" result="c"/>
+    <feComposite in="c" in2="b" operator="in" result="s"/>
+    <feMerge><feMergeNode in="s"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="f-system" x="-5%" y="-5%" width="110%" height="110%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="12" result="b"/>
+    <feFlood flood-color="#1a4a7a" flood-opacity="0.2" result="c"/>
+    <feComposite in="c" in2="b" operator="in" result="s"/>
+    <feMerge><feMergeNode in="s"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+
+  <!-- Arrow markers -->
+  <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto">
+    <path d="M0,0 L0,7 L9,3.5 z" fill="rgba(74,127,168,0.7)"/>
+  </marker>
+  <marker id="arr-d" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto">
+    <path d="M0,0 L0,7 L9,3.5 z" fill="rgba(148,163,184,0.5)"/>
+  </marker>
+
+</defs>
+
+<!-- ── BG ── -->
+<rect width="1060" height="820" fill="#0a0d14"/>
+<rect width="1060" height="820" fill="url(#dots)"/>
+
+<!-- ══════════════════════════════════════════
+     SYSTEM BOUNDARY
+     x=155 y=50  w=750 h=720  (right edge=905)
+══════════════════════════════════════════ -->
+<rect x="155" y="50" width="750" height="720" rx="18"
+  fill="rgba(14,22,44,0.55)"
+  stroke="#1e2a42" stroke-width="1.5" stroke-dasharray="8,5"
+  filter="url(#f-system)"/>
+<!-- System label -->
+<text x="530" y="36" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="11.5" font-weight="600"
+  fill="#3d5070" letter-spacing="0.12em" text-transform="uppercase">
+  SISTEMA DE DEBIDA DILIGENCIA ANTICORRUPCIÓN
+</text>
+
+<!-- ══════════════════════════════════════════
+     CONNECTION LINES
+     (drawn before use-cases so they appear under)
+══════════════════════════════════════════ -->
+
+<!-- ─── Proveedor (72,220) → Captura use cases ─── -->
+<!-- → Registrar tercero (380,145) -->
+<line x1="110" y1="205" x2="247" y2="145" stroke="rgba(74,127,168,0.5)" stroke-width="1.3" marker-end="url(#arr)"/>
+<!-- → Declarar beneficiario (380,225) -->
+<line x1="110" y1="215" x2="247" y2="225" stroke="rgba(74,127,168,0.5)" stroke-width="1.3" marker-end="url(#arr)"/>
+<!-- → Declarar PEP (355,300) -->
+<line x1="110" y1="225" x2="237" y2="302" stroke="rgba(74,127,168,0.5)" stroke-width="1.3" marker-end="url(#arr)"/>
+<!-- → Adjuntar documentación (365,378) -->
+<line x1="110" y1="232" x2="237" y2="378" stroke="rgba(74,127,168,0.5)" stroke-width="1.3" marker-end="url(#arr)"/>
+
+<!-- Proveedor dashed "provee info" → Declarar beneficiario -->
+<line x1="108" y1="212" x2="245" y2="225" stroke="rgba(148,163,184,0.35)"
+  stroke-width="1" stroke-dasharray="5,3" marker-end="url(#arr-d)"/>
+<text x="148" y="204" font-family="Inter,sans-serif" font-size="9" fill="rgba(148,163,184,0.5)" font-style="italic">provee info</text>
+
+<!-- ─── Data Entry (72,460) → Captura use cases ─── -->
+<line x1="110" y1="443" x2="247" y2="145" stroke="rgba(74,127,168,0.38)" stroke-width="1.2" marker-end="url(#arr)"/>
+<line x1="110" y1="450" x2="247" y2="225" stroke="rgba(74,127,168,0.38)" stroke-width="1.2" marker-end="url(#arr)"/>
+<line x1="110" y1="458" x2="237" y2="302" stroke="rgba(74,127,168,0.38)" stroke-width="1.2" marker-end="url(#arr)"/>
+<line x1="110" y1="464" x2="237" y2="378" stroke="rgba(74,127,168,0.38)" stroke-width="1.2" marker-end="url(#arr)"/>
+
+<!-- ─── Cumplimiento (72,635) → Reportes + Decisión ─── -->
+<line x1="110" y1="618" x2="292" y2="536" stroke="rgba(74,127,168,0.5)" stroke-width="1.3" marker-end="url(#arr)"/>
+<line x1="110" y1="625" x2="295" y2="608" stroke="rgba(74,127,168,0.5)" stroke-width="1.3" marker-end="url(#arr)"/>
+<line x1="110" y1="632" x2="295" y2="677" stroke="rgba(74,127,168,0.5)" stroke-width="1.3" marker-end="url(#arr)"/>
+<!-- Cumplimiento → Revisar formulario -->
+<line x1="110" y1="636" x2="592" y2="680" stroke="rgba(74,127,168,0.45)" stroke-width="1.2" marker-end="url(#arr)"/>
+<!-- Cumplimiento → Aprobar o rechazar -->
+<line x1="110" y1="640" x2="592" y2="748" stroke="rgba(74,127,168,0.45)" stroke-width="1.2" marker-end="url(#arr)"/>
+
+<!-- ─── Restrictivas (988,195) → Procesamiento ─── -->
+<line x1="950" y1="180" x2="818" y2="145" stroke="rgba(74,127,168,0.5)" stroke-width="1.3" marker-end="url(#arr)"/>
+<line x1="950" y1="190" x2="818" y2="225" stroke="rgba(74,127,168,0.5)" stroke-width="1.3" marker-end="url(#arr)"/>
+
+<!-- ─── Gerencia (988,660) → Decisión ─── -->
+<line x1="950" y1="648" x2="818" y2="680" stroke="rgba(74,127,168,0.5)" stroke-width="1.3" marker-end="url(#arr)"/>
+<line x1="950" y1="655" x2="818" y2="748" stroke="rgba(74,127,168,0.5)" stroke-width="1.3" marker-end="url(#arr)"/>
+
+<!-- ══════════════════════════════════════════
+     USE CASES — CAPTURA (teal)
+     Left column, rows 145 / 225 / 300 / 378
+══════════════════════════════════════════ -->
+
+<!-- Registrar tercero — cx=380 cy=145 rx=128 ry=28 -->
+<ellipse cx="383" cy="145" rx="133" ry="29"
+  fill="#072f35" stroke="#0e8a96" stroke-width="1.8" filter="url(#f-teal)"/>
+<text x="383" y="150" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="12.5" font-weight="600" fill="#72f0fd">
+  Registrar tercero
+</text>
+
+<!-- Declarar beneficiario — cx=380 cy=225 rx=142 ry=28 -->
+<ellipse cx="383" cy="225" rx="140" ry="29"
+  fill="#072f35" stroke="#0e8a96" stroke-width="1.8" filter="url(#f-teal)"/>
+<text x="383" y="230" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="12.5" font-weight="600" fill="#72f0fd">
+  Declarar beneficiario
+</text>
+
+<!-- Declarar PEP — cx=355 cy=302 rx=112 ry=28 -->
+<ellipse cx="355" cy="302" rx="115" ry="29"
+  fill="#072f35" stroke="#0e8a96" stroke-width="1.8" filter="url(#f-teal)"/>
+<text x="355" y="307" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="12.5" font-weight="600" fill="#72f0fd">
+  Declarar PEP
+</text>
+
+<!-- Adjuntar documentación — cx=370 cy=378 rx=133 ry=28 -->
+<ellipse cx="370" cy="378" rx="130" ry="29"
+  fill="#072f35" stroke="#0e8a96" stroke-width="1.8" filter="url(#f-teal)"/>
+<text x="370" y="383" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="12.5" font-weight="600" fill="#72f0fd">
+  Adjuntar documentación
+</text>
+
+<!-- ══════════════════════════════════════════
+     USE CASES — PROCESAMIENTO (green)
+     Right column rows 145 / 225
+══════════════════════════════════════════ -->
+
+<!-- Verificar listas restrictivas — cx=680 cy=145 rx=155 ry=28 -->
+<ellipse cx="680" cy="145" rx="155" ry="29"
+  fill="#062819" stroke="#0e9a55" stroke-width="1.8" filter="url(#f-green)"/>
+<text x="680" y="150" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="12.5" font-weight="600" fill="#5ef0a0">
+  Verificar listas restrictivas
+</text>
+
+<!-- Calcular nivel de riesgo — cx=680 cy=225 rx=148 ry=28 -->
+<ellipse cx="680" cy="225" rx="148" ry="29"
+  fill="#062819" stroke="#0e9a55" stroke-width="1.8" filter="url(#f-green)"/>
+<text x="680" y="230" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="12.5" font-weight="600" fill="#5ef0a0">
+  Calcular nivel de riesgo
+</text>
+
+<!-- ══════════════════════════════════════════
+     USE CASES — REPORTES (purple)
+     Rows 536 / 608 / 677
+══════════════════════════════════════════ -->
+
+<!-- Generar reporte de DD — cx=435 cy=536 rx=138 ry=28 -->
+<ellipse cx="435" cy="536" rx="140" ry="29"
+  fill="#130d38" stroke="#6040c8" stroke-width="1.8" filter="url(#f-purple)"/>
+<text x="435" y="541" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="12.5" font-weight="600" fill="#c4b5fd">
+  Generar reporte de DD
+</text>
+
+<!-- Consultar historial — cx=430 cy=608 rx=128 ry=28 -->
+<ellipse cx="430" cy="608" rx="130" ry="29"
+  fill="#130d38" stroke="#6040c8" stroke-width="1.8" filter="url(#f-purple)"/>
+<text x="430" y="613" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="12.5" font-weight="600" fill="#c4b5fd">
+  Consultar historial
+</text>
+
+<!-- Monitoreo continuo — cx=420 cy=677 rx=125 ry=28 -->
+<ellipse cx="420" cy="677" rx="125" ry="29"
+  fill="#130d38" stroke="#6040c8" stroke-width="1.8" filter="url(#f-purple)"/>
+<text x="420" y="682" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="12.5" font-weight="600" fill="#c4b5fd">
+  Monitoreo continuo
+</text>
+
+<!-- ══════════════════════════════════════════
+     USE CASES — DECISIÓN (gold)
+     Rows 680 / 748
+══════════════════════════════════════════ -->
+
+<!-- Revisar formulario — cx=695 cy=680 rx=125 ry=28 -->
+<ellipse cx="695" cy="680" rx="125" ry="29"
+  fill="#2a1600" stroke="#c07820" stroke-width="1.8" filter="url(#f-gold)"/>
+<text x="695" y="685" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="12.5" font-weight="600" fill="#fcd5a0">
+  Revisar formulario
+</text>
+
+<!-- Aprobar o rechazar — cx=695 cy=748 rx=125 ry=28 -->
+<ellipse cx="695" cy="748" rx="125" ry="29"
+  fill="#2a1600" stroke="#c07820" stroke-width="1.8" filter="url(#f-gold)"/>
+<text x="695" y="753" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="12.5" font-weight="600" fill="#fcd5a0">
+  Aprobar o rechazar
+</text>
+
+<!-- ══════════════════════════════════════════
+     ACTORS
+     Stick figure helper:
+       head = circle r=16
+       body = line down 36px
+       arms = line 38px wide at body+14
+       legs = 2 lines spread 15px
+══════════════════════════════════════════ -->
+
+<!-- ── Proveedor ── (cx=72 body-top=185) -->
+<g filter="url(#f-actor)">
+  <circle cx="72" cy="185" r="17" fill="#0a1828" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="72" y1="202" x2="72" y2="238" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="53" y1="218" x2="91" y2="218" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="72" y1="238" x2="56" y2="260" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="72" y1="238" x2="88" y2="260" stroke="#4a7fa8" stroke-width="1.8"/>
+</g>
+<text x="72" y="276" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="11.5" font-weight="600" fill="#8896b0">
+  (Proveedor)
+</text>
+<text x="72" y="290" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="9.5" fill="#3d5070">
+  sujeto de los datos
+</text>
+
+<!-- ── Data Entry ── (cx=72 body-top=425) -->
+<g filter="url(#f-actor)">
+  <circle cx="72" cy="425" r="17" fill="#0a1828" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="72" y1="442" x2="72" y2="478" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="53" y1="458" x2="91" y2="458" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="72" y1="478" x2="56" y2="500" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="72" y1="478" x2="88" y2="500" stroke="#4a7fa8" stroke-width="1.8"/>
+</g>
+<text x="72" y="516" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="9.5" fill="#3d5070">
+  data entry: NUEVO
+</text>
+
+<!-- ── Cumplimiento ── (cx=72 body-top=598) -->
+<g filter="url(#f-actor)">
+  <circle cx="72" cy="598" r="17" fill="#0a1828" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="72" y1="615" x2="72" y2="651" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="53" y1="631" x2="91" y2="631" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="72" y1="651" x2="56" y2="673" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="72" y1="651" x2="88" y2="673" stroke="#4a7fa8" stroke-width="1.8"/>
+</g>
+<text x="72" y="690" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="11.5" font-weight="600" fill="#8896b0">
+  Cumplimiento
+</text>
+
+<!-- ── Restrictivas ── (cx=988 body-top=158) -->
+<g filter="url(#f-actor)">
+  <circle cx="988" cy="158" r="17" fill="#0a1828" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="988" y1="175" x2="988" y2="211" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="969" y1="191" x2="1007" y2="191" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="988" y1="211" x2="972" y2="233" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="988" y1="211" x2="1004" y2="233" stroke="#4a7fa8" stroke-width="1.8"/>
+</g>
+<text x="988" y="248" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="11.5" font-weight="600" fill="#8896b0">
+  Restrictivas
+</text>
+<text x="988" y="262" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="9.5" fill="#3d5070">
+  externo
+</text>
+
+<!-- ── Gerencia ── (cx=988 body-top=622) -->
+<g filter="url(#f-actor)">
+  <circle cx="988" cy="622" r="17" fill="#0a1828" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="988" y1="639" x2="988" y2="675" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="969" y1="655" x2="1007" y2="655" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="988" y1="675" x2="972" y2="697" stroke="#4a7fa8" stroke-width="1.8"/>
+  <line x1="988" y1="675" x2="1004" y2="697" stroke="#4a7fa8" stroke-width="1.8"/>
+</g>
+<text x="988" y="712" text-anchor="middle"
+  font-family="Inter,sans-serif" font-size="11.5" font-weight="600" fill="#8896b0">
+  (Gerencia)
+</text>
+
+</svg>
+</div>
+
+<!-- ── LEGEND ── -->
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#0e8a96;box-shadow:0 0 7px #0e8a96;"></div>
+    Captura
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#0e9a55;box-shadow:0 0 7px #0e9a55;"></div>
+    Procesamiento
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#6040c8;box-shadow:0 0 7px #6040c8;"></div>
+    Reportes
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#c07820;box-shadow:0 0 7px #c07820;"></div>
+    Decisión
+  </div>
+  <div class="legend-item">
+    <div class="legend-line"></div>
+    provee información
+  </div>
+</div>
+
+</body>
+</html>
