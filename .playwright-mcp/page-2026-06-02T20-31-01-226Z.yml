@@ -1,0 +1,11 @@
+- generic [ref=e20]:
+  - heading "Damas — Sala 7BDT06" [level=1] [ref=e21]
+  - generic [ref=e22]:
+    - heading "Turno" [level=2] [ref=e23]
+    - generic [ref=e24]: Negras
+    - paragraph [ref=e25]: Esperando oponente...
+    - paragraph [ref=e26]: "Movimientos: 1"
+    - button "Rendirse" [ref=e27] [cursor=pointer]
+  - generic [ref=e117]:
+    - heading "Historial" [level=3] [ref=e118]
+    - generic [ref=e123]: 1. (2,2) → (3,3)

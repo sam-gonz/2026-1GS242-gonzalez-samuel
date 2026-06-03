@@ -1,0 +1,22 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - heading "DAMAS Juego de Mesa" [level=1] [ref=e5]:
+      - text: DAMAS
+      - generic [ref=e6]: Juego de Mesa
+    - paragraph [ref=e7]: Elige un modo de juego
+  - generic [ref=e9]:
+    - button "⚔ 1 vs Máquina" [ref=e10] [cursor=pointer]:
+      - generic [ref=e11]: ⚔
+      - text: 1 vs Máquina
+    - button "👥 Multijugador" [ref=e12] [cursor=pointer]:
+      - generic [ref=e13]: 👥
+      - text: Multijugador
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e16]: Tu nombre
+      - textbox "Tu nombre" [active] [ref=e17]:
+        - /placeholder: "Ej: Alice"
+    - button "Jugar contra la Máquina" [ref=e18] [cursor=pointer]
+    - paragraph [ref=e19]:
+      - text: Jugarás como
+      - strong [ref=e20]: Rojas

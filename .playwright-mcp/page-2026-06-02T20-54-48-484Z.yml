@@ -1,0 +1,19 @@
+- generic [ref=e155]:
+  - generic [ref=e156]:
+    - heading "DAMAS Juego de Mesa" [level=1] [ref=e157]:
+      - text: DAMAS
+      - generic [ref=e158]: Juego de Mesa
+    - paragraph [ref=e159]: Dos jugadores · Un ganador
+  - generic [ref=e161]:
+    - generic [ref=e162]:
+      - generic [ref=e163]: Tu nombre
+      - textbox "Tu nombre" [active] [ref=e164]:
+        - /placeholder: "Ej: Alice"
+    - generic [ref=e165]:
+      - generic [ref=e166]: Código de sala
+      - textbox "Código de sala" [ref=e167]:
+        - /placeholder: Para unirte a una sala
+    - generic [ref=e168]:
+      - button "Crear sala" [ref=e169] [cursor=pointer]
+      - generic [ref=e170]: o
+      - button "Unirse a sala" [ref=e171] [cursor=pointer]
