@@ -1,8 +1,0 @@
-- generic [ref=e3]:
-  - heading "Damas" [level=1] [ref=e4]
-  - generic [ref=e5]:
-    - heading "Crear o unirse a una sala" [level=2] [ref=e6]
-    - textbox "Tu nombre" [ref=e7]
-    - textbox "Código de sala (para unirse)" [ref=e8]
-    - button "Crear sala" [ref=e9] [cursor=pointer]
-    - button "Unirse a sala" [ref=e10] [cursor=pointer]

@@ -6,33 +6,31 @@ services:
     volumes:
       - mongodb_data:/data/db
 
-  app:
-    build: ./app
+  backend:
+    build: ./backend
     ports:
       - "3000:3000"
     env_file:
       - .env
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017/checkers
+      - AI_URL=http://ai-service:3001
     depends_on:
       - mongodb
-    profiles:
-      - production
 
-  app-dev:
-    image: oven/bun:1
-    working_dir: /app
-    volumes:
-      - ./app:/app
-      - /app/node_modules
+  ai-service:
+    build: ./ai-service
     ports:
-      - "3000:3000"
+      - "3001:3001"
+
+  frontend:
+    build: ./frontend
+    ports:
       - "5173:5173"
-    env_file:
-      - .env
+    environment:
+      - VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY:-}
     depends_on:
-      - mongodb
-    command: sh -c "bun install && bun run dev"
-    profiles:
-      - dev
+      - backend
 
 volumes:
   mongodb_data:

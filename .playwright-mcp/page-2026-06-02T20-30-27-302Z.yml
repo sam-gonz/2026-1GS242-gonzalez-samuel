@@ -1,8 +1,0 @@
-- generic [ref=e11]:
-  - heading "Sala" [level=1] [ref=e12]
-  - generic [ref=e13]: 7BDT06
-  - paragraph [ref=e14]: Comparte el código con un amigo para jugar
-  - generic [ref=e15]:
-    - heading "Jugadores" [level=2] [ref=e16]
-    - paragraph [ref=e17]: Alice (Rojo)
-    - paragraph [ref=e18]: Esperando oponente...
