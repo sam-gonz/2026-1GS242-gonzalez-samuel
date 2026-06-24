@@ -1,0 +1,39 @@
+{
+  "clientes": [
+    {
+      "cip": "12345",
+      "nombre": "Juan Pérez",
+      "telefono": "6677-8899",
+      "email": "juan.perez@demo.com",
+      "estado": "activo"
+    },
+    {
+      "cip": "67890",
+      "nombre": "María González",
+      "telefono": "6123-4567",
+      "email": "maria.gonzalez@demo.com",
+      "estado": "activo"
+    },
+    {
+      "cip": "11111",
+      "nombre": "Carlos Rodríguez",
+      "telefono": "6999-0001",
+      "email": "carlos.rodriguez@demo.com",
+      "estado": "inactivo"
+    },
+    {
+      "cip": "22222",
+      "nombre": "Ana López",
+      "telefono": "6543-2109",
+      "email": "ana.lopez@demo.com",
+      "estado": "activo"
+    },
+    {
+      "cip": "99999",
+      "nombre": "Luis Martínez",
+      "telefono": "6000-1234",
+      "email": "luis.martinez@demo.com",
+      "estado": "activo"
+    }
+  ]
+}
